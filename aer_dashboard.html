@@ -1,0 +1,678 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+<meta charset="UTF-8">
+<title>AER 근무표 → 캘린더</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=IBM+Plex+Mono:wght@500;600&family=Inter:wght@400;500;600&display=swap" rel="stylesheet">
+<script src="https://cdnjs.cloudflare.com/ajax/libs/xlsx/0.18.5/xlsx.full.min.js"></script>
+<style>
+  :root{
+    --bg:#F5F6F3; --surface:#FFFFFF; --border:#E1E3DD; --border-strong:#C9CCC3;
+    --text:#1A2230; --text-2:#5B6470; --text-mute:#8B9199;
+    --d-bg:#E1F5EE; --d-fg:#085041; --d-line:#5DCAA5;
+    --e-bg:#E6F1FB; --e-fg:#0C447C; --e-line:#85B7EB;
+    --n-bg:#EEEDFE; --n-fg:#3C3489; --n-line:#AFA9EC;
+    --h-bg:#FAECE7; --h-fg:#712B13; --h-line:#F0997B;
+    --off-bg:#F1EFE8; --off-fg:#8B9199;
+    --font-sans:'Inter',system-ui,sans-serif; --font-mono:'IBM Plex Mono',monospace;
+  }
+  *{box-sizing:border-box;}
+  body{margin:0;background:var(--bg);color:var(--text);font-family:var(--font-sans);line-height:1.5;padding:32px 20px 80px;}
+  .wrap{max-width:880px;margin:0 auto;}
+  h1{font-size:22px;font-weight:600;margin:0 0 4px;letter-spacing:-0.01em;}
+  .sub{color:var(--text-2);font-size:14px;margin:0 0 28px;}
+  .card{background:var(--surface);border:0.5px solid var(--border);border-radius:12px;padding:20px 22px;margin-bottom:20px;}
+  .modeTabs{display:flex;gap:8px;margin-bottom:14px;}
+  .modeTab{border:0.5px solid var(--border-strong);background:var(--surface);padding:7px 14px;border-radius:20px;font-size:13px;font-weight:500;cursor:pointer;color:var(--text-2);}
+  .modeTab.active{background:var(--text);color:#fff;border-color:var(--text);}
+  .drop{border:1.5px dashed var(--border-strong);border-radius:12px;padding:32px 20px;text-align:center;cursor:pointer;transition:border-color .15s,background .15s;}
+  .drop:hover, .drop.drag{border-color:var(--d-line);background:var(--d-bg);}
+  .drop input{display:none;}
+  .drop .icon{font-size:26px;color:var(--text-mute);margin-bottom:8px;}
+  .drop .main{font-size:14px;font-weight:500;}
+  .drop .hint{font-size:12.5px;color:var(--text-mute);margin-top:4px;}
+  .settings{display:flex;gap:16px;flex-wrap:wrap;margin-top:16px;}
+  .field{flex:1;min-width:200px;}
+  .field label{display:block;font-size:12.5px;color:var(--text-2);margin-bottom:5px;font-weight:500;}
+  .field input, .field textarea{width:100%;border:0.5px solid var(--border-strong);border-radius:8px;padding:8px 10px;font-family:var(--font-sans);font-size:13.5px;background:var(--surface);color:var(--text);}
+  .field textarea{resize:vertical;min-height:38px;font-family:var(--font-mono);font-size:12.5px;}
+  .btn{border:0.5px solid var(--border-strong);background:var(--surface);color:var(--text);font-size:13.5px;font-weight:500;padding:9px 16px;border-radius:8px;cursor:pointer;font-family:var(--font-sans);}
+  .btn:hover{background:var(--bg);}
+  .btn.primary{background:var(--text);color:#fff;border-color:var(--text);}
+  .btn.primary:hover{opacity:.88;}
+  .btn:disabled{opacity:.4;cursor:not-allowed;}
+  .stats{display:grid;grid-template-columns:repeat(auto-fit,minmax(90px,1fr));gap:10px;margin-bottom:14px;}
+  .stat{background:var(--bg);border-radius:8px;padding:12px 10px;text-align:center;}
+  .stat .n{font-family:var(--font-mono);font-size:22px;font-weight:600;}
+  .stat .l{font-size:12px;color:var(--text-2);margin-top:2px;}
+  table.monthly{width:100%;border-collapse:collapse;font-size:13px;}
+  table.monthly th, table.monthly td{padding:7px 8px;text-align:center;border-bottom:0.5px solid var(--border);}
+  table.monthly th{color:var(--text-2);font-weight:500;font-size:12px;}
+  table.monthly td:first-child, table.monthly th:first-child{text-align:left;font-weight:500;font-family:var(--font-mono);}
+  .tabs{display:flex;gap:8px;margin-bottom:18px;flex-wrap:wrap;}
+  .tab{border:0.5px solid var(--border-strong);background:var(--surface);padding:7px 14px;border-radius:20px;font-size:13px;font-weight:500;cursor:pointer;color:var(--text-2);}
+  .tab.active{background:var(--text);color:#fff;border-color:var(--text);}
+  .grid{display:grid;grid-template-columns:repeat(7,1fr);gap:6px;}
+  .dow{text-align:center;font-size:11.5px;color:var(--text-mute);font-weight:600;padding-bottom:4px;}
+  .day{min-height:64px;border-radius:8px;border:0.5px solid var(--border);padding:6px 6px;cursor:default;position:relative;background:var(--surface);}
+  .day.empty{border:none;background:transparent;}
+  .day .num{font-size:11px;color:var(--text-mute);font-family:var(--font-mono);}
+  .day.off .num{color:var(--text-mute);}
+  .day.work{cursor:pointer;border-width:1px;}
+  .day.work:hover{border-color:var(--text);}
+  .day.selected{border:1.5px solid var(--text);}
+  .badge{display:inline-block;margin-top:5px;font-family:var(--font-mono);font-weight:600;font-size:12px;padding:2px 6px;border-radius:5px;line-height:1.3;}
+  .day.dD .badge{background:var(--d-bg);color:var(--d-fg);}
+  .day.dE .badge{background:var(--e-bg);color:var(--e-fg);}
+  .day.dN .badge{background:var(--n-bg);color:var(--n-fg);}
+  .day.dHeli .badge, .day.dHeliN .badge{background:var(--h-bg);color:var(--h-fg);}
+  .detail{margin-top:18px;padding-top:16px;border-top:0.5px solid var(--border);}
+  .detail .dhead{display:flex;align-items:center;gap:10px;margin-bottom:10px;flex-wrap:wrap;}
+  .detail .dhead .date{font-weight:600;font-size:15px;}
+  .noteline{font-family:var(--font-mono);font-size:12.5px;color:var(--text-2);padding:3px 0;border-bottom:0.5px solid var(--border);}
+  .noteline:last-child{border-bottom:none;}
+  .noteline b{color:var(--text);font-weight:600;}
+  .actions{display:flex;gap:10px;flex-wrap:wrap;margin-top:24px;}
+  .gcal-list{margin-top:10px;max-height:280px;overflow-y:auto;}
+  .gcal-item{display:flex;justify-content:space-between;align-items:center;padding:8px 10px;border-radius:8px;background:var(--bg);margin-bottom:6px;font-size:13px;}
+  .gcal-item a{color:var(--text);text-decoration:none;font-weight:500;border:0.5px solid var(--border-strong);padding:5px 10px;border-radius:6px;background:var(--surface);}
+  .gcal-item a:hover{background:var(--bg);}
+  .note{font-size:12.5px;color:var(--text-mute);margin-top:8px;line-height:1.6;}
+  .legend{display:flex;gap:14px;flex-wrap:wrap;font-size:12.5px;color:var(--text-2);margin-bottom:14px;}
+  .legend span{display:inline-flex;align-items:center;gap:6px;}
+  .legend i{width:10px;height:10px;border-radius:3px;display:inline-block;}
+  .hidden{display:none !important;}
+  .err{background:var(--h-bg);color:var(--h-fg);border-radius:8px;padding:10px 14px;font-size:13px;margin-top:12px;}
+  .warn{background:#FAEEDA;color:#633806;border-radius:8px;padding:10px 14px;font-size:12.5px;margin-top:12px;line-height:1.6;}
+  .spinner{display:inline-block;width:14px;height:14px;border:2px solid var(--border-strong);border-top-color:var(--text);border-radius:50%;animation:spin .7s linear infinite;vertical-align:-2px;margin-right:6px;}
+  @keyframes spin{to{transform:rotate(360deg);}}
+  .review textarea{width:100%;min-height:200px;font-family:var(--font-mono);font-size:12px;border:0.5px solid var(--border-strong);border-radius:8px;padding:10px;}
+</style>
+</head>
+<body>
+<div class="wrap">
+  <h1>AER 근무표 → 캘린더</h1>
+  <p class="sub">근무표 엑셀 또는 사진(스크린샷)을 올리면 내 근무일과 인계 메모를 정리하고, ICS 파일과 구글 캘린더 등록 링크를 만들어줍니다. 여러 달 파일을 순서대로 올리면 계속 누적됩니다. <b>엑셀 모드는 인터넷 연결이나 API 없이 완전히 오프라인으로 동작합니다.</b> 사진 인식만 API가 필요합니다.</p>
+
+  <div class="card">
+    <div class="modeTabs">
+      <div class="modeTab active" data-mode="xlsx">엑셀 파일</div>
+      <div class="modeTab" data-mode="image">사진 / 스크린샷</div>
+    </div>
+
+    <div id="xlsxPane">
+      <div class="drop" id="dropXlsx">
+        <input type="file" id="fileXlsx" accept=".xlsx,.xls">
+        <div class="icon">⬆</div>
+        <div class="main">엑셀 파일을 끌어놓거나 클릭해서 선택하세요</div>
+        <div class="hint">.xlsx / .xls — Date × Person 그리드 형식</div>
+      </div>
+    </div>
+
+    <div id="imagePane" class="hidden">
+      <div class="drop" id="dropImage">
+        <input type="file" id="fileImage" accept="image/*">
+        <div class="icon">⬆</div>
+        <div class="main">근무표 사진/스크린샷을 끌어놓거나 클릭해서 선택하세요</div>
+        <div class="hint">주간 달력형 표 (D/MD/E/E1/N/DrHeli 행이 있는 형식) — Claude Vision이 읽어서 표로 변환합니다</div>
+      </div>
+      <div class="warn">사진 인식은 실험적 기능이며 <b>Gemini API 키가 필요</b>합니다. Google AI Studio에서 무료로 키를 발급받을 수 있습니다. 이름이나 근무 표시를 잘못 읽을 수 있으니, 추출 후 미리보기에서 반드시 확인하고 진행해주세요. API 키는 브라우저 로컬 스토리지에 안전하게 저장됩니다.</div>
+      <div class="field" style="margin-top:10px;">
+        <label>Gemini API 키 (<a href="https://aistudio.google.com/app/apikey" target="_blank">aistudio.google.com/app/apikey</a> 에서 발급)</label>
+        <input type="password" id="apiKeyInput" placeholder="AIza...">
+      </div>
+    </div>
+
+    <div class="settings">
+      <div class="field">
+        <label>내 이름 (표에 있는 이름과 동일해야 함)</label>
+        <input type="text" id="personName" value="추승화">
+      </div>
+      <div class="field">
+        <label>전공의 명단 (쉼표로 구분 — 본인 근무 슬롯 외에는 목록에서 제외)</label>
+        <textarea id="residents">한성수, 오준호, 신정협, 정한솔, 고재호, 강인호, 엄규웅</textarea>
+      </div>
+    </div>
+    <div id="fileErr" class="err hidden"></div>
+    <div id="loading" class="hidden" style="margin-top:12px;font-size:13px;color:var(--text-2);"><span class="spinner"></span>사진을 읽는 중입니다...</div>
+
+    <div id="reviewBox" class="review hidden" style="margin-top:14px;">
+      <label style="display:block;font-size:12.5px;color:var(--text-2);margin-bottom:6px;font-weight:500;">추출된 내용 (필요하면 수정 후 진행하세요)</label>
+      <textarea id="reviewJson"></textarea>
+      <div class="actions" style="margin-top:10px;">
+        <button class="btn primary" id="confirmReview">이 내용으로 캘린더 만들기</button>
+        <button class="btn" id="cancelReview">취소</button>
+      </div>
+    </div>
+
+    <div class="actions" style="margin-top:14px;">
+      <button class="btn" id="resetAll">전체 초기화</button>
+    </div>
+  </div>
+
+  <div id="results" class="hidden">
+    <div class="card">
+      <div class="stats" id="stats"></div>
+      <table class="monthly" id="monthlyTable"></table>
+    </div>
+
+    <div class="card">
+      <div class="legend">
+        <span><i style="background:var(--d-bg)"></i>D</span>
+        <span><i style="background:var(--e-bg)"></i>E</span>
+        <span><i style="background:var(--n-bg)"></i>N</span>
+        <span><i style="background:var(--h-bg)"></i>Heli / Heli+N</span>
+      </div>
+      <div class="tabs" id="tabs"></div>
+      <div class="grid" id="dow"></div>
+      <div class="grid" id="calendar"></div>
+      <div class="detail hidden" id="detail"></div>
+      <div class="actions">
+        <button class="btn primary" id="dlMonth">이 달 ICS 다운로드</button>
+        <button class="btn" id="dlAll">전체 기간 ICS 다운로드</button>
+        <button class="btn" id="toggleGcal">구글 캘린더 빠른등록 링크 보기</button>
+      </div>
+      <div class="note">ICS 가져오기가 전체 일정을 한 번에 등록하는 가장 확실한 방법입니다. 구글 캘린더 링크는 근무일 하나씩 새 창에서 열려 내용이 채워진 채로 뜨고, "저장"만 누르면 등록돼요 — 브라우저에서 완전 자동 일괄 등록은 구글 계정 인증 앱 등록이 필요해 이 화면에서는 지원되지 않습니다.</div>
+      <div class="gcal-list hidden" id="gcalList"></div>
+    </div>
+  </div>
+</div>
+
+<script>
+const DUTY_LABEL = {D:'D', E:'E', N:'N', HEMS:'Heli', 'HEMS/N':'Heli+N 24시간'};
+const SKIP = new Set(['O','휴가', undefined, null, '']);
+
+let allData = {};      // 'YYYY-MM-DD' -> {name: code}   (accumulates across uploads)
+let events = [];
+let months = [];
+let currentMonth = null;
+let selectedDate = null;
+let pendingExtract = null; // holds extracted-from-image data awaiting confirmation
+
+function pad(n){ return n < 10 ? '0'+n : ''+n; }
+function dstr(y,m,d){ return y+'-'+pad(m)+'-'+pad(d); }
+function addDays(dateStr, delta){
+  const [y,m,d] = dateStr.split('-').map(Number);
+  const dt = new Date(y, m-1, d);
+  dt.setDate(dt.getDate()+delta);
+  return dstr(dt.getFullYear(), dt.getMonth()+1, dt.getDate());
+}
+
+// ---------- XLSX parsing ----------
+function parseWorkbookIntoAllData(wb, person){
+  wb.SheetNames.forEach(sheetName => {
+    const ws = wb.Sheets[sheetName];
+    const rows = XLSX.utils.sheet_to_json(ws, {header:1, raw:true, defval:null});
+    let headerRowIdx = -1;
+    for(let i=0;i<Math.min(rows.length,30);i++){
+      if(rows[i] && rows[i].some(c => c === person)){ headerRowIdx = i; }
+    }
+    if(headerRowIdx === -1) return;
+    const cols = {};
+    const header = rows[headerRowIdx];
+    for(let c=7;c<header.length;c++){ if(header[c]) cols[c] = header[c]; }
+    const ymMatch = sheetName.match(/(\d{4})년/);
+    const year = ymMatch ? parseInt(ymMatch[1]) : new Date().getFullYear();
+    for(let r=headerRowIdx+1;r<rows.length;r++){
+      const row = rows[r];
+      if(!row || typeof row[0] !== 'string') continue;
+      const m = row[0].match(/^(\d{1,2})월(\d{1,2})일/);
+      if(!m) continue;
+      const month = parseInt(m[1]), day = parseInt(m[2]);
+      const key = dstr(year, month, day);
+      const dayData = {};
+      Object.keys(cols).forEach(c => { dayData[cols[c]] = row[parseInt(c)]; });
+      allData[key] = dayData;
+    }
+  });
+}
+
+// ---------- Image (vision) extraction ----------
+function fileToBase64(file){
+  return new Promise((resolve, reject) => {
+    const r = new FileReader();
+    r.onload = () => resolve(r.result.split(',')[1]);
+    r.onerror = reject;
+    r.readAsDataURL(file);
+  });
+}
+
+const EXTRACT_PROMPT = `이 이미지는 한국 병원 응급의학과의 월간 당직표입니다. 표는 요일(일~토) 열과 주 단위 행 블록으로 되어 있고, 각 날짜 블록 안에 다음 근무 행들이 있습니다:
+- D행: 전문의(여러 명, 줄바꿈으로 구분)와 전공의(한 명, "·"이면 없음) 두 칸
+- MD행: 이름 한 명 또는 "·"
+- E행: 이름 한 명 또는 "·"
+- E1행: 이름 한 명 또는 "·"
+- N행: 전문의(여러 명)와 전공의(한 명, "·"이면 없음) 두 칸
+- DrHeli행: "이름1/이름2" 형식 (두 번째 이름이 그날 실제 헬기 탑승자입니다)
+EM OPD, EICU/WD, EICU, W/ICU 행은 무시하세요.
+
+이미지 최상단 제목에서 연도와 월을 읽어주세요 (예: "2026년 07월").
+
+각 날짜 칸의 왼쪽 위에 있는 숫자가 날짜입니다.
+
+다음 JSON 형식으로만 응답하세요. 다른 설명, 코드블록 표시(백틱) 없이 순수 JSON만 출력하세요:
+
+{
+  "year": 2026,
+  "month": 7,
+  "days": {
+    "1": {
+      "D_attendings": ["이름1","이름2"],
+      "D_residents": ["이름3"],
+      "MD": [],
+      "E": ["이름4"],
+      "E1": [],
+      "N_attendings": ["이름5","이름6"],
+      "N_residents": ["이름7"],
+      "drheli": ["이름8","이름9"]
+    }
+  }
+}
+
+이름이 없거나 "·"인 칸은 빈 배열 []로, DrHeli 칸이 비어있으면 drheli를 빈 배열 []로 표시하세요. 표에 있는 모든 날짜를 빠짐없이 포함하세요.`;
+
+async function extractFromImage(file){
+  const base64 = await fileToBase64(file);
+  const apiKey = document.getElementById('apiKeyInput').value.trim();
+  
+  if(!apiKey){
+    throw new Error('Gemini API 키가 필요합니다. 위에 API 키를 입력해주세요.');
+  }
+
+  // 로컬 스토리지에 API 키 저장
+  localStorage.setItem('geminiApiKey', apiKey);
+
+  const body = JSON.stringify({
+    contents: [{
+      parts: [
+        { text: EXTRACT_PROMPT },
+        { inline_data: { mime_type: file.type || "image/jpeg", data: base64 } }
+      ]
+    }],
+    generationConfig: {
+      response_mime_type: "application/json"
+    }
+  });
+
+  const resp = await fetch(`https://generativelanguage.googleapis.com/v1beta/models/gemini-1.5-pro:generateContent?key=${apiKey}`, {
+    method: "POST",
+    headers: { "Content-Type": "application/json" },
+    body
+  });
+
+  if(!resp.ok){
+    const errText = await resp.text();
+    throw new Error(`API 호출 실패 (${resp.status}): ${errText.slice(0,200)}`);
+  }
+  
+  const data = await resp.json();
+  const text = data.candidates?.[0]?.content?.parts?.[0]?.text;
+  
+  if(!text) throw new Error('API 응답에서 텍스트를 찾을 수 없습니다. ' + JSON.stringify(data).slice(0,300));
+  
+  try {
+    const clean = text.replace(/```json/g,'').replace(/```/g,'').trim();
+    return JSON.parse(clean);
+  } catch(e) {
+    throw new Error('API 응답이 올바른 JSON 형식이 아닙니다: ' + text.slice(0,200));
+  }
+}
+
+function convertExtractedToAllData(extracted){
+  const year = extracted.year, month = extracted.month;
+  const added = {};
+  Object.keys(extracted.days || {}).forEach(dayNum => {
+    const dd = parseInt(dayNum);
+    const key = dstr(year, month, dd);
+    const info = extracted.days[dayNum];
+    const dayData = {};
+    (info.D_attendings||[]).concat(info.D_residents||[]).forEach(n => { if(n) dayData[n] = 'D'; });
+    (info.MD||[]).forEach(n => { if(n) dayData[n] = 'MD'; });
+    (info.E||[]).forEach(n => { if(n) dayData[n] = 'E'; });
+    (info.E1||[]).forEach(n => { if(n) dayData[n] = 'E1'; });
+    (info.N_attendings||[]).concat(info.N_residents||[]).forEach(n => { if(n) dayData[n] = 'N'; });
+    if(info.drheli && info.drheli.length >= 2 && info.drheli[1]){
+      const flyer = info.drheli[1];
+      dayData[flyer] = (dayData[flyer] === 'N') ? 'HEMS/N' : 'HEMS';
+    }
+    added[key] = dayData;
+  });
+  return added;
+}
+
+// ---------- Notes / events (shared by both input types) ----------
+function namesWithCode(dayData, person, codes, excludeResidents, residents){
+  const out = [];
+  Object.keys(dayData).forEach(name => {
+    if(name === person) return;
+    if(excludeResidents && residents.has(name)) return;
+    if(codes.includes(dayData[name])) out.push(name);
+  });
+  return out;
+}
+function fmtList(arr){ return arr.length ? arr.join(', ') : '없음'; }
+
+function buildEvents(person, residentsList){
+  const residents = new Set(residentsList);
+  events = [];
+  const dates = Object.keys(allData).sort();
+  dates.forEach(dateStr => {
+    const dayData = allData[dateStr];
+    const myCode = dayData[person];
+    if(SKIP.has(myCode)) return;
+
+    const prevData = allData[addDays(dateStr,-1)];
+    const nextData = allData[addDays(dateStr, 1)];
+    let summary = null, lines = [], cls = '';
+
+    if(myCode === 'D'){
+      summary = 'D'; cls='dD';
+      lines.push(['전일 N', prevData ? fmtList(namesWithCode(prevData, person, ['N','HEMS/N'], true, residents)) : '자료없음(전월)']);
+      lines.push(['D', fmtList(namesWithCode(dayData, person, ['D'], false, residents))]);
+      lines.push(['E', fmtList(namesWithCode(dayData, person, ['E'], true, residents))]);
+      lines.push(['MD', fmtList(namesWithCode(dayData, person, ['MD'], true, residents))]);
+      lines.push(['N', fmtList(namesWithCode(dayData, person, ['N','HEMS/N'], true, residents))]);
+    } else if(myCode === 'E'){
+      summary = 'E'; cls='dE';
+      lines.push(['D', fmtList(namesWithCode(dayData, person, ['D'], true, residents))]);
+      lines.push(['MD', fmtList(namesWithCode(dayData, person, ['MD'], true, residents))]);
+      lines.push(['N', fmtList(namesWithCode(dayData, person, ['N','HEMS/N'], true, residents))]);
+    } else if(myCode === 'N' || myCode === 'HEMS/N'){
+      summary = DUTY_LABEL[myCode]; cls = myCode==='N' ? 'dN' : 'dHeliN';
+      lines.push(['D', fmtList(namesWithCode(dayData, person, ['D'], true, residents))]);
+      lines.push(['E', fmtList(namesWithCode(dayData, person, ['E'], true, residents))]);
+      lines.push(['N(함께)', fmtList(namesWithCode(dayData, person, ['N','HEMS/N'], false, residents))]);
+      lines.push(['익일 D', nextData ? fmtList(namesWithCode(nextData, person, ['D'], true, residents)) : '자료없음(익월)']);
+    } else if(myCode === 'HEMS'){
+      summary = 'Heli'; cls='dHeli';
+      lines.push(['D', fmtList(namesWithCode(dayData, person, ['D'], true, residents))]);
+      lines.push(['E', fmtList(namesWithCode(dayData, person, ['E'], true, residents))]);
+      lines.push(['MD', fmtList(namesWithCode(dayData, person, ['MD'], true, residents))]);
+    } else {
+      return;
+    }
+    events.push({dateStr, summary, lines, cls});
+  });
+
+  months = [...new Set(events.map(e => e.dateStr.slice(0,7)))].sort();
+}
+
+// ---------- Rendering ----------
+function renderStats(){
+  const counts = {D:0,E:0,N:0,Heli:0,'Heli+N':0};
+  events.forEach(e => {
+    if(e.summary === 'D') counts.D++;
+    else if(e.summary === 'E') counts.E++;
+    else if(e.summary === 'N') counts.N++;
+    else if(e.summary === 'Heli') counts.Heli++;
+    else counts['Heli+N']++;
+  });
+  const total = events.length;
+  const statsEl = document.getElementById('stats');
+  const items = [['총 근무일',total],['D',counts.D],['E',counts.E],['N',counts.N],['Heli',counts.Heli],['Heli+N',counts['Heli+N']]];
+  statsEl.innerHTML = items.map(([l,n]) => `<div class="stat"><div class="n">${n}</div><div class="l">${l}</div></div>`).join('');
+
+  const tableEl = document.getElementById('monthlyTable');
+  if(months.length > 1){
+    const perMonth = {};
+    months.forEach(m => perMonth[m] = {total:0,D:0,E:0,N:0,Heli:0,'Heli+N':0});
+    events.forEach(e => {
+      const m = e.dateStr.slice(0,7);
+      perMonth[m].total++;
+      if(e.summary==='D') perMonth[m].D++;
+      else if(e.summary==='E') perMonth[m].E++;
+      else if(e.summary==='N') perMonth[m].N++;
+      else if(e.summary==='Heli') perMonth[m].Heli++;
+      else perMonth[m]['Heli+N']++;
+    });
+    let html = '<tr><th>월</th><th>총 근무일</th><th>D</th><th>E</th><th>N</th><th>Heli</th><th>Heli+N</th></tr>';
+    months.forEach(m => {
+      const [y,mm] = m.split('-');
+      const c = perMonth[m];
+      html += `<tr><td>${y}년 ${parseInt(mm)}월</td><td>${c.total}</td><td>${c.D}</td><td>${c.E}</td><td>${c.N}</td><td>${c.Heli}</td><td>${c['Heli+N']}</td></tr>`;
+    });
+    tableEl.innerHTML = html;
+    tableEl.classList.remove('hidden');
+  } else {
+    tableEl.innerHTML = '';
+  }
+}
+
+function renderTabs(){
+  const tabsEl = document.getElementById('tabs');
+  tabsEl.innerHTML = months.map(m => {
+    const [y,mm] = m.split('-');
+    return `<div class="tab ${m===currentMonth?'active':''}" data-month="${m}">${y}년 ${parseInt(mm)}월</div>`;
+  }).join('');
+  tabsEl.querySelectorAll('.tab').forEach(t => {
+    t.addEventListener('click', () => { currentMonth = t.dataset.month; selectedDate=null; renderTabs(); renderCalendar(); renderDetail(); });
+  });
+}
+
+function renderCalendar(){
+  const dowEl = document.getElementById('dow');
+  dowEl.innerHTML = ['일','월','화','수','목','금','토'].map(d => `<div class="dow">${d}</div>`).join('');
+
+  const calEl = document.getElementById('calendar');
+  if(!currentMonth){ calEl.innerHTML=''; return; }
+  const [year, month] = currentMonth.split('-').map(Number);
+  const firstDow = new Date(year, month-1, 1).getDay();
+  const daysInMonth = new Date(year, month, 0).getDate();
+
+  const eventByDate = {};
+  events.forEach(e => { if(e.dateStr.startsWith(currentMonth)) eventByDate[e.dateStr] = e; });
+
+  let html = '';
+  for(let i=0;i<firstDow;i++) html += `<div class="day empty"></div>`;
+  for(let d=1; d<=daysInMonth; d++){
+    const dateStr = dstr(year, month, d);
+    const ev = eventByDate[dateStr];
+    if(ev){
+      html += `<div class="day work ${ev.cls} ${selectedDate===dateStr?'selected':''}" data-date="${dateStr}">
+        <div class="num">${d}</div>
+        <div class="badge">${ev.summary}</div>
+      </div>`;
+    } else {
+      html += `<div class="day off"><div class="num">${d}</div></div>`;
+    }
+  }
+  calEl.innerHTML = html;
+  calEl.querySelectorAll('.day.work').forEach(el => {
+    el.addEventListener('click', () => { selectedDate = el.dataset.date; renderCalendar(); renderDetail(); });
+  });
+}
+
+function renderDetail(){
+  const el = document.getElementById('detail');
+  if(!selectedDate){ el.classList.add('hidden'); return; }
+  const ev = events.find(e => e.dateStr === selectedDate);
+  if(!ev){ el.classList.add('hidden'); return; }
+  el.classList.remove('hidden');
+  const gcalUrl = buildGcalUrl(ev);
+  el.innerHTML = `
+    <div class="dhead">
+      <span class="date">${ev.dateStr} · ${ev.summary}</span>
+      <a class="btn" href="${gcalUrl}" target="_blank" rel="noopener">구글 캘린더에 추가</a>
+    </div>
+    ${ev.lines.map(([label,val]) => `<div class="noteline"><b>${label}</b> — ${val}</div>`).join('')}
+  `;
+}
+
+function buildGcalUrl(ev){
+  const start = ev.dateStr.replace(/-/g,'');
+  const end = addDays(ev.dateStr,1).replace(/-/g,'');
+  const details = ev.lines.map(([l,v]) => `${l} - ${v}`).join('\n');
+  const params = new URLSearchParams({ action:'TEMPLATE', text: ev.summary, dates: `${start}/${end}`, details });
+  return `https://calendar.google.com/calendar/render?${params.toString()}`;
+}
+
+function icsEscape(s){ return s.replace(/\\/g,'\\\\').replace(/;/g,'\\;').replace(/,/g,'\\,'); }
+function buildIcs(evList){
+  const now = new Date();
+  const dtstamp = now.toISOString().replace(/[-:]/g,'').split('.')[0]+'Z';
+  let lines = ['BEGIN:VCALENDAR','VERSION:2.0','PRODID:-//aer-dashboard//KO','CALSCALE:GREGORIAN','X-WR-CALNAME:choo','X-WR-TIMEZONE:Asia/Seoul'];
+  evList.forEach(ev => {
+    const start = ev.dateStr.replace(/-/g,'');
+    const end = addDays(ev.dateStr,1).replace(/-/g,'');
+    const uid = start + '-' + Math.random().toString(16).slice(2,10) + '@aer-dashboard';
+    const desc = ev.lines.map(([l,v]) => icsEscape(`${l} - ${v}`)).join('\\n');
+    lines.push('BEGIN:VEVENT', `UID:${uid}`, `DTSTAMP:${dtstamp}`, `DTSTART;VALUE=DATE:${start}`, `DTEND;VALUE=DATE:${end}`, `SUMMARY:${icsEscape(ev.summary)}`, `DESCRIPTION:${desc}`, 'END:VEVENT');
+  });
+  lines.push('END:VCALENDAR');
+  return lines.join('\r\n')+'\r\n';
+}
+function downloadIcs(content, filename){
+  const blob = new Blob([content], {type:'text/calendar'});
+  const url = URL.createObjectURL(blob);
+  const a = document.createElement('a');
+  a.href = url; a.download = filename;
+  document.body.appendChild(a); a.click(); document.body.removeChild(a);
+  URL.revokeObjectURL(url);
+}
+
+function renderGcalList(){
+  const el = document.getElementById('gcalList');
+  const monthEvents = events.filter(e => e.dateStr.startsWith(currentMonth));
+  el.innerHTML = monthEvents.map(ev => `
+    <div class="gcal-item">
+      <span>${ev.dateStr} · ${ev.summary}</span>
+      <a href="${buildGcalUrl(ev)}" target="_blank" rel="noopener">추가</a>
+    </div>
+  `).join('');
+}
+
+function finalizeAndRender(){
+  const person = document.getElementById('personName').value.trim();
+  if(Object.keys(allData).length === 0){
+    showErr('데이터가 없습니다. 파일을 먼저 올려주세요.');
+    return;
+  }
+  const residents = document.getElementById('residents').value.split(',').map(s=>s.trim()).filter(Boolean);
+  buildEvents(person, residents);
+  if(events.length === 0){
+    showErr(`"${person}"의 근무일(D/E/N/HEMS)을 찾지 못했습니다. 이름 철자와 파일 형식을 확인해주세요.`);
+    return;
+  }
+  currentMonth = months[months.length-1];
+  selectedDate = null;
+  document.getElementById('results').classList.remove('hidden');
+  renderStats(); renderTabs(); renderCalendar(); renderDetail();
+  document.getElementById('gcalList').classList.add('hidden');
+  document.getElementById('toggleGcal').textContent = '구글 캘린더 빠른등록 링크 보기';
+}
+
+function showErr(msg){
+  const errEl = document.getElementById('fileErr');
+  errEl.textContent = msg;
+  errEl.classList.remove('hidden');
+}
+function clearErr(){ document.getElementById('fileErr').classList.add('hidden'); }
+
+// ---------- File handlers ----------
+function handleXlsxFile(file){
+  clearErr();
+  const reader = new FileReader();
+  reader.onload = (e) => {
+    try{
+      const data = new Uint8Array(e.target.result);
+      const wb = XLSX.read(data, {type:'array'});
+      const person = document.getElementById('personName').value.trim();
+      const before = Object.keys(allData).length;
+      parseWorkbookIntoAllData(wb, person);
+      if(Object.keys(allData).length === before){
+        showErr(`시트에서 "${person}" 이름이 포함된 헤더 행을 찾지 못했습니다. 이름 철자를 확인해주세요.`);
+        return;
+      }
+      finalizeAndRender();
+    } catch(err){
+      showErr('파일을 읽는 중 오류가 발생했습니다: ' + err.message);
+    }
+  };
+  reader.readAsArrayBuffer(file);
+}
+
+async function handleImageFile(file){
+  clearErr();
+  document.getElementById('loading').classList.remove('hidden');
+  try{
+    const extracted = await extractFromImage(file);
+    pendingExtract = extracted;
+    document.getElementById('reviewJson').value = JSON.stringify(extracted, null, 2);
+    document.getElementById('reviewBox').classList.remove('hidden');
+  } catch(err){
+    showErr('사진 인식 중 오류가 발생했습니다: ' + err.message);
+  } finally {
+    document.getElementById('loading').classList.add('hidden');
+  }
+}
+
+// ---------- Wiring ----------
+// 로컬 스토리지에서 API 키 불러오기
+const savedApiKey = localStorage.getItem('geminiApiKey');
+if(savedApiKey){
+  document.getElementById('apiKeyInput').value = savedApiKey;
+}
+
+document.querySelectorAll('.modeTab').forEach(t => {
+  t.addEventListener('click', () => {
+    document.querySelectorAll('.modeTab').forEach(x => x.classList.remove('active'));
+    t.classList.add('active');
+    document.getElementById('xlsxPane').classList.toggle('hidden', t.dataset.mode !== 'xlsx');
+    document.getElementById('imagePane').classList.toggle('hidden', t.dataset.mode !== 'image');
+  });
+});
+
+function wireDrop(dropId, inputId, handler){
+  const dropEl = document.getElementById(dropId);
+  const inputEl = document.getElementById(inputId);
+  dropEl.addEventListener('click', () => inputEl.click());
+  inputEl.addEventListener('change', (e) => { if(e.target.files[0]) handler(e.target.files[0]); });
+  ['dragover','dragenter'].forEach(evt => dropEl.addEventListener(evt, (e) => { e.preventDefault(); dropEl.classList.add('drag'); }));
+  ['dragleave','drop'].forEach(evt => dropEl.addEventListener(evt, (e) => { e.preventDefault(); dropEl.classList.remove('drag'); }));
+  dropEl.addEventListener('drop', (e) => { const f = e.dataTransfer.files[0]; if(f) handler(f); });
+}
+wireDrop('dropXlsx','fileXlsx', handleXlsxFile);
+wireDrop('dropImage','fileImage', handleImageFile);
+
+document.getElementById('confirmReview').addEventListener('click', () => {
+  try{
+    const edited = JSON.parse(document.getElementById('reviewJson').value);
+    const added = convertExtractedToAllData(edited);
+    Object.assign(allData, added);
+    document.getElementById('reviewBox').classList.add('hidden');
+    finalizeAndRender();
+  } catch(err){
+    showErr('JSON 형식이 올바르지 않습니다: ' + err.message);
+  }
+});
+document.getElementById('cancelReview').addEventListener('click', () => {
+  document.getElementById('reviewBox').classList.add('hidden');
+  pendingExtract = null;
+});
+
+document.getElementById('dlMonth').addEventListener('click', () => {
+  if(!currentMonth) return;
+  const monthEvents = events.filter(e => e.dateStr.startsWith(currentMonth));
+  downloadIcs(buildIcs(monthEvents), `choo_AER_schedule_${currentMonth.replace('-','_')}.ics`);
+});
+document.getElementById('dlAll').addEventListener('click', () => {
+  downloadIcs(buildIcs(events), `choo_AER_schedule_all.ics`);
+});
+document.getElementById('toggleGcal').addEventListener('click', (e) => {
+  const el = document.getElementById('gcalList');
+  const willShow = el.classList.contains('hidden');
+  if(willShow) renderGcalList();
+  el.classList.toggle('hidden');
+  e.target.textContent = willShow ? '구글 캘린더 빠른등록 링크 숨기기' : '구글 캘린더 빠른등록 링크 보기';
+});
+document.getElementById('resetAll').addEventListener('click', () => {
+  allData = {}; events = []; months = []; currentMonth = null; selectedDate = null;
+  document.getElementById('results').classList.add('hidden');
+  document.getElementById('reviewBox').classList.add('hidden');
+  clearErr();
+});
+</script>
+</body>
+</html>
