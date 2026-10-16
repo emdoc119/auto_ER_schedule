@@ -1,12 +1,13 @@
-# AER Excel → Calendar dry-run
+# AER Excel → Calendar
 
-기존 `aer_dashboard.html`의 Excel/ICS 기능에 공유 파서와 읽기 전용 Calendar 비교를 추가한다. **현재 버전은 Calendar 생성·수정·삭제를 실행하지 않는다.** Issue #3의 첫 단계이며 실제 동기화 승인은 후속 단계다.
+기존 `aer_dashboard.html`의 Excel/ICS 기능과 같은 파서로, Mac mini의 독립 백엔드에서 `AER duty` 미리보기와 승인형 동기화를 수행한다. **기본값은 쓰기 비활성**이며 미리보기 이후 적용 버튼/명령을 실행해야 반영한다.
 
-- `lib/aer-parser.js`: 브라우저/Node 공통 Excel 행 파서와 동료·인계 규칙.
-- `backend/pipeline.js`: 입력 수단에 독립적인 `previewExcel(Buffer, options)` 진입점. 향후 승인된 Telegram 수신기가 같은 함수를 호출할 수 있다. 봇 연결은 아직 없다.
-- `lib/reconcile.js`: 종일 이벤트 후보와 create/update/noop/review 비교. 내부 키는 설명 대신 private extended properties 후보에만 포함한다.
-- `backend/`: Mac mini의 독립 읽기 전용 OAuth 및 루프백 업로드 화면.
+- `lib/aer-parser.js`: 브라우저/Node 공통 파서, ICU 그룹과 동료·인계 규칙.
+- `backend/pipeline.js`: 입력 수단에 독립적인 Excel 정규화와 미리보기.
+- `lib/reconcile.js`: 종일 일정과 보수적인 기존 이벤트 대조. 설명에는 의료진만, 식별자는 private properties에 보관한다.
+- `backend/sync-service.js`: 채널에 묶인 만료 계획, 재조회, ETag, 프로세스 간 잠금, 적용 후 검증. 삭제는 지원하지 않는다.
+- `backend/telegram.js`: 허용된 개인 채팅의 Excel → 미리보기 → 명시적 적용 수신 어댑터. 독립 polling 실행은 기존 Hermes 리스너 소유권을 확인한 경우에만 활성화한다.
 
-설치와 사용: [Mac mini 운영 안내](docs/MAC_MINI.md). `npm ci --ignore-scripts && npm test`로 합성 테스트만 실행한다. 실명 근무표, Calendar 응답, OAuth 파일을 저장소나 CI에 넣지 않는다.
+[설치·웹 사용](docs/MAC_MINI.md) · [Telegram 및 복구](docs/SYNC_TELEGRAM.md)
 
-기존 정적 화면 배포는 이 PR 병합 후 별도 확인한다. ICS/빠른등록은 수동 기능이며 중복 방지 보장이 없다.
+`npm ci --ignore-scripts && npm test`는 합성 데이터만 사용한다. 개인 Excel, Calendar 응답, OAuth·Telegram 인증정보는 저장소/CI에 넣지 않는다. 실제 파일·인증·기존 봇 연결의 현장 검증과 운영 설치는 별도 확인이 필요하다.

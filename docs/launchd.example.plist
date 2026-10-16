@@ -7,6 +7,9 @@
 <key>EnvironmentVariables</key><dict>
 <key>AER_OAUTH_CLIENT_FILE</key><string>REPLACE_HOME/.config/aer-calendar/client.json</string>
 <key>AER_OAUTH_TOKEN_FILE</key><string>REPLACE_HOME/.config/aer-calendar/token.json</string>
+<key>AER_STATE_DIR</key><string>REPLACE_HOME/.config/aer-calendar/state</string>
+<key>AER_OAUTH_WRITE_TOKEN_FILE</key><string>REPLACE_HOME/.config/aer-calendar/write-token.json</string>
+<key>AER_ENABLE_WRITES</key><string>0</string>
 <key>AER_CALENDAR_ID</key><string>REPLACE_AER_DUTY_CALENDAR_ID</string>
 </dict>
 <key>RunAtLoad</key><true/>

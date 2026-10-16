@@ -1,9 +1,10 @@
 'use strict';
-const fs=require('node:fs');
+const {readPrivateJSON}=require('./state');
 const {OAuth2Client}=require('google-auth-library');
+const WRITE_SCOPE='https://www.googleapis.com/auth/calendar.events.owned';
 const SCOPE='https://www.googleapis.com/auth/calendar.events.readonly';
 function authClient(){
-  const document=JSON.parse(fs.readFileSync(process.env.AER_OAUTH_CLIENT_FILE,'utf8'));
+  const document=readPrivateJSON(process.env.AER_OAUTH_CLIENT_FILE);
   const c=document.installed;
   if(!c) throw Error('Desktop OAuth client required');
   return new OAuth2Client(c.client_id,c.client_secret,'http://127.0.0.1:8788/callback');
@@ -11,7 +12,7 @@ function authClient(){
 async function listEvents(calendarId,start,end,{auth,fetchImpl=fetch}={}){
   if(!calendarId || calendarId==='primary') throw Error('Explicit AER duty calendar ID required');
   auth ||= authClient();
-  if(!auth.credentials?.refresh_token) auth.setCredentials(JSON.parse(fs.readFileSync(process.env.AER_OAUTH_TOKEN_FILE,'utf8')));
+  if(!auth.credentials?.refresh_token) auth.setCredentials(readPrivateJSON(process.env.AER_OAUTH_TOKEN_FILE));
   const {token}=await auth.getAccessToken();
   if(!token) throw Error('OAuth unavailable');
   const items=[], seen=new Set(); let pageToken;
@@ -29,4 +30,4 @@ async function listEvents(calendarId,start,end,{auth,fetchImpl=fetch}={}){
   }while(pageToken);
   return items;
 }
-module.exports={SCOPE,authClient,listEvents};
+module.exports={WRITE_SCOPE,SCOPE,authClient,listEvents};
