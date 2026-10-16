@@ -1,0 +1,9 @@
+node_modules/
+.env
+*.xlsx
+*.xls
+*.ics
+credentials*.json
+token*.json
+preview*.json
+.DS_Store

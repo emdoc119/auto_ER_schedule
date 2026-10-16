@@ -1,0 +1,15 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE plist PUBLIC "-//Apple//DTD PLIST 1.0//EN" "http://www.apple.com/DTDs/PropertyList-1.0.dtd">
+<plist version="1.0"><dict>
+<key>Label</key><string>local.aer-calendar.preview</string>
+<key>ProgramArguments</key><array><string>/REPLACE_NODE_ABSOLUTE_PATH</string><string>REPLACE_HOME/Services/aer-calendar/backend/server.js</string></array>
+<key>WorkingDirectory</key><string>REPLACE_HOME/Services/aer-calendar</string>
+<key>EnvironmentVariables</key><dict>
+<key>AER_OAUTH_CLIENT_FILE</key><string>REPLACE_HOME/.config/aer-calendar/client.json</string>
+<key>AER_OAUTH_TOKEN_FILE</key><string>REPLACE_HOME/.config/aer-calendar/token.json</string>
+<key>AER_CALENDAR_ID</key><string>REPLACE_AER_DUTY_CALENDAR_ID</string>
+</dict>
+<key>RunAtLoad</key><true/>
+<key>KeepAlive</key><true/>
+<key>ThrottleInterval</key><integer>30</integer>
+</dict></plist>
