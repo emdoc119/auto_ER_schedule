@@ -3,6 +3,6 @@
   "version": "0.1.0",
   "private": true,
   "engines": {"node": ">=22"},
-  "scripts": {"test": "node --test tests/*.test.js", "start": "node backend/server.js", "authorize": "node backend/authorize.js", "audit": "node backend/audit.js"},
+  "scripts": {"test": "node --test tests/*.test.js", "start": "node backend/server.js", "authorize": "node backend/authorize.js", "authorize:audit": "node backend/authorize-audit.js", "audit": "node backend/audit.js"},
   "dependencies": {"google-auth-library": "10.5.0", "xlsx": "https://cdn.sheetjs.com/xlsx-0.20.3/xlsx-0.20.3.tgz"}
 }

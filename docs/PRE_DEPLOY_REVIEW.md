@@ -14,7 +14,7 @@
 
 **확정 제한:** 연결된 Calendar 도구는 상세 조회에서도 extendedProperties.private와 ETag를 노출하지 않는다. 따라서 이미 관리된 이벤트가 있는지 확인할 수 없어 실제 adopt/noop 분리는 아직 확정하지 못했다. 누락된 metadata를 '없음'으로 확정하지 않는다. raw API 권한 확인 전에는 이 예상치를 운영 실행의 근거로 쓰지 않는다.
 
-직접 읽기 OAuth 준비 후 실행할 수 있는 집계 전용 명령을 추가했다. 쓰기 adapter나 plan 저장 없이 기본 Calendar events.list를 조회하고 같은 planFor를 사용한다.
+최소 owned.readonly audit 전용 OAuth와 실제 grant 검사, 명시적인 ID/ETag/private projection을 추가했다. 준비는 [읽기 audit 절차](READONLY_AUDIT_SETUP.md)를 따른다. 기존 커넥터 결과를 확정 raw 응답으로 사용하지 않는다. 직접 OAuth 준비 후 실행할 수 있는 집계 전용 명령을 추가했다. 쓰기 adapter나 plan 저장 없이 기본 Calendar events.list를 조회하고 같은 planFor를 사용한다.
 
 ```sh
 # 파일/본인/전공의/Calendar/OAuth 경로는 비공개 환경 설정에서 공급한다.

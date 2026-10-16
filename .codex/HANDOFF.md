@@ -1,13 +1,9 @@
-# PR #5 independent verification follow-up
+# Read-only audit preparation
 
-Baseline #5 a6ab0d4c19341c138c6e15cbf0ebf865405ca207; branch codex/aer-approved-sync-telegram. User forbids main merge, Calendar write enable, standalone polling and service restart without further approval.
+Current branch codex/aer-approved-sync-telegram extends #5 6f9039fa756ab33ceed252afbbcc422867f58666. User authorizes audit preparation, but prohibits Calendar writes, Hermes changes, gateway restart and main merge. Latest generic "proceed" is continuation, not the still-unasked exact PR4 merge approval.
 
-Fixed per-browser sessions with separate cookie/CSRF/channel, memory-only server epoch and expiry. Tests cover foreign PLAN IDs with valid attacker session, token/cookie mixing, persistent plan across server restart and expiry/fixation. Standalone polling CLI is disabled; Hermes receiver is kept.
+Added audit-only owned.readonly OAuth command (PKCE/state, strict actual scope), raw Calendar ID/private/ETag projection and validation, optional exclusive private report. Prepared user-private audit.env outside repo; no credentials/token present. Cloud UI is logged in, but dedicated AER project search empty and new-project trial quota reached. No existing project/OAuth client edited. Google consent remains pending.
 
-Read-only ingress investigation pinned actual installed Hermes native Telegram plugin (source 73b9f2af). Proposed native handler + Python/Node RPC, durable claim and required-handler guard; no upstream/runtime edits. See docs/HERMES_INGRESS_DESIGN.md for exact entrypoints and approval scope.
+Pages verified via GitHub API main / root and latest main build c0998958; live root/dashboard HTTP200 and exact main bytes. New external SheetJS script probe returned403; PR4 candidate now vendors identical pinned0.20.3 with license/hash and browser-distribution regression, tests30. New PR4 HEAD ce2e5ea2a7b4320b11878c0fb56c88a8d22aa922 must be reviewed/approved for public deployment. Keep PR5 stacked and incorporate prerequisite through ordinary branch merge, no force/rebase.
 
-Actual workbook22 and fresh Calendar22 match visible date/title/description content, no duplicate dates. Expected unmanaged adoption22 preserves old IDs, but connector omits private properties/ETags so actual adopt/noop split is not confirmed. backend/audit.js provides read-only raw API aggregate verification once OAuth exists. Never treat omitted metadata as absent.
-
-PR #4 compatibility fix 45475dc: accept known ancillary coworker codes; tests29 and actual extraction22 pass. Keep PR #5 stacked until user-approved #4 merge, then fetch exact main SHA, retarget #5 and rerun full CI. Current main ancestry checks are preparation only.
-
-Start with tasks/CURRENT.md and docs/PRE_DEPLOY_REVIEW.md. No live Calendar writes, polling, config/runtime edits or restarts were performed.
+Current content comparison22 is not raw identity audit. Actual create/update/adopt/noop/review remains unconfirmed until dedicated OAuth/raw GET succeeds. Use docs/READONLY_AUDIT_SETUP.md and docs/PAGES_PR4_IMPACT.md, then request exact PR4-only merge approval; no implied #5 or operational approval.

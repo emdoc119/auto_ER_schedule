@@ -8,6 +8,6 @@
 - `backend/sync-service.js`: 채널에 묶인 만료 계획, 재조회, ETag, 프로세스 간 잠금, 적용 후 검증. 삭제는 지원하지 않는다.
 - `backend/telegram.js`: 허용된 개인 채팅의 Excel → 미리보기 → 명시적 적용 수신 어댑터. 운영 수신기는 기존 Hermes만 유지한다. 별도 polling CLI는 비활성화했으며 실제 수신 진입점의 최소 어댑터 설계는 docs/HERMES_INGRESS_DESIGN.md에서 확인한다.
 
-[설치·웹 사용](docs/MAC_MINI.md) · [Telegram 및 복구](docs/SYNC_TELEGRAM.md)
+[읽기 전용 audit 준비](docs/READONLY_AUDIT_SETUP.md) · [설치·웹 사용](docs/MAC_MINI.md) · [Telegram 및 복구](docs/SYNC_TELEGRAM.md)
 
 `npm ci --ignore-scripts && npm test`는 합성 데이터만 사용한다. 개인 Excel, Calendar 응답, OAuth·Telegram 인증정보는 저장소/CI에 넣지 않는다. 실제 파일·인증·기존 봇 연결의 현장 검증과 운영 설치는 별도 확인이 필요하다.

@@ -6,6 +6,10 @@
 
 이 개발 과정에서는 실제 Calendar 쓰기, Mac mini 설치/재시작, 기존 Hermes polling 변경을 수행하지 않았다. 제공된 원본 Excel에서 22건을 추출해 연결된 Calendar의 22건과 날짜·제목·의료진 설명 내용을 대조했으며 모두 일치했다(공백/줄바꿈은 정규화). 신규·내용 변경 0건이므로 재등록하지 않았다. 독립 OAuth 파일과 봇 소유권이 확인되지 않아 자동화 런타임의 현장 E2E는 아직 미완료다. 기존 22건은 앞선 읽기 전용 조회로 확인했으며 이 저장소에 개인 응답을 보관하지 않는다.
 
+## 이번 읽기 전용 audit 준비
+
+[최소 OAuth audit 절차](READONLY_AUDIT_SETUP.md)를 사용한다. 이번에는 audit 전용 owned.readonly grant만 발급하며 아래 일반 write 설정은 실행하지 않는다. raw ID/private/ETag를 읽은 뒤 실제 건수를 확정해야 한다.
+
 ## 준비와 설치
 
 - Node.js 22+, Git, npm, 독립 코드 경로(예: `$HOME/Services/aer-calendar`).

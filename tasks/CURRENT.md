@@ -1,10 +1,11 @@
 # Current objective
 
-PR #5 독립 검증 후속: 웹 승인 세션 격리, 기존 Hermes 단일 수신기 설계, 22건 이관 재검증, PR #4 → #5 병합 준비.
+읽기 전용 Calendar audit 준비와 PR #4 공개 Pages 영향 검증 후 별도 병합 승인 요청.
 
-- Scope: per-browser sessions and restart/cross-session tests, readonly audit CLI, standalone polling CLI disable, Hermes entrypoint/adapter approval design, dependent PR validation.
-- Constraints: main merge, Calendar writes/enable, new polling, service restart are forbidden without additional user approval. Hermes runtime/config/source unchanged. Preserve private data and user files.
-- Evidence: actual workbook and fresh Calendar 22 events match visible fields, no duplicated dates; conditional unmanaged plan create0/update0/adopt22/noop0/review0 preserves existing IDs. Raw private properties/ETags unavailable through connector; adoption split unconfirmed until direct readonly OAuth audit.
-- PR #4: minimal ancillary-code fix; 29/29 tests and actual-file extraction22. No main merge.
-- Docs: docs/PRE_DEPLOY_REVIEW.md, docs/HERMES_INGRESS_DESIGN.md.
-- Next approval gates: PR #4 merge, direct OAuth setup, exact Hermes plugin/guard/runtime integration diff, then separately first Calendar writes.
+- Scope: audit-only calendar.events.owned.readonly + PKCE/state, actual grant validation, explicit raw ID/private/ETag projection, private report; Pages local SheetJS asset and compatibility verification.
+- Constraints: no Calendar writes, Hermes config changes, gateway restart or main merge. Never reuse Old Jarvis clients/tokens or publish private audit artifacts.
+- Local private inputs prepared outside repo, directory700/file600; no client JSON/token yet. Cloud UI reports new-project trial quota reached; no existing project/client changes.
+- Actual adopt/noop split remains unconfirmed until direct readonly OAuth succeeds. Prior visible content match22 and conditional adoption22 are not a confirmed raw audit.
+- PR #4 new candidate ce2e5ea2a7b4320b11878c0fb56c88a8d22aa922: SheetJS CDN403 removed with pinned local asset; tests30 passed. Main-root Pages deployment means merge changes public site; approval not granted.
+- Docs: READONLY_AUDIT_SETUP.md, PAGES_PR4_IMPACT.md, PRE_DEPLOY_REVIEW.md.
+- Next: dedicated audit Desktop JSON/project choice and user Google consent; final CI; request approval for exact PR4 SHA only. Keep PR5 stacked.
