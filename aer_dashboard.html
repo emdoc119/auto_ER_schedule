@@ -174,7 +174,7 @@
         <button class="btn" id="dlAll">전체 기간 ICS 다운로드</button>
         <button class="btn" id="toggleGcal">구글 캘린더 빠른등록 링크 보기</button>
       </div>
-      <div class="note">ICS 가져오기가 전체 일정을 한 번에 등록하는 가장 확실한 방법입니다. 구글 캘린더 링크는 근무일 하나씩 새 창에서 열려 내용이 채워진 채로 뜨고, "저장"만 누르면 등록돼요 — 브라우저에서 완전 자동 일괄 등록은 구글 계정 인증 앱 등록이 필요해 이 화면에서는 지원되지 않습니다.</div>
+      <div class="note">근무 코드는 기존처럼 종일 일정으로 표시합니다. (I)는 ICU 겸무이며 일반 근무와 같은 그룹으로 동료·인계를 확인합니다. ICS UID는 재생성 시 동일하게 유지되지만 Google Calendar의 재가져오기 중복 제거는 보장되지 않으므로 기존 일정과 비교하세요. ICS 가져오기가 전체 일정을 한 번에 등록하는 가장 확실한 방법입니다. 구글 캘린더 링크는 근무일 하나씩 새 창에서 열려 내용이 채워진 채로 뜨고, "저장"만 누르면 등록돼요 — 브라우저에서 완전 자동 일괄 등록은 구글 계정 인증 앱 등록이 필요해 이 화면에서는 지원되지 않습니다.</div>
       <div class="gcal-list hidden" id="gcalList"></div>
     </div>
   </div>
@@ -183,6 +183,23 @@
 <script>
 const DUTY_LABEL = {D:'D', E:'E', N:'N', HEMS:'Heli', 'HEMS/N':'Heli+N 24시간'};
 const SKIP = new Set(['O','휴가', undefined, null, '']);
+// ICU (I) 겸무 표시 보존 / 기본 근무 그룹 판정 분리.
+const SUPPORTED_SHIFT = new Set(['D','E','N','HEMS','HEMS/N']);
+function baseDutyCode(raw){
+  if(raw == null || SKIP.has(raw)) return null;
+  if(typeof raw !== 'string') return null;
+  const code = raw.trim();
+  const m = code.match(/^(D|E|N|HEMS|HEMS\/N)\(I\)$/);
+  return m ? m[1] : code;
+}
+function isICUDuty(raw){
+  return typeof raw === 'string' && /^(D|E|N|HEMS|HEMS\/N)\(I\)$/.test(raw.trim());
+}
+function stablePersonHash(person){
+  let h = 2166136261;
+  for(let i=0; i<person.length; i++){ h ^= person.charCodeAt(i); h = Math.imul(h, 16777619); }
+  return (h >>> 0).toString(36);
+}
 
 let allData = {};      // 'YYYY-MM-DD' -> {name: code}   (accumulates across uploads)
 let events = [];
@@ -348,7 +365,7 @@ function namesWithCode(dayData, person, codes, excludeResidents, residents){
   Object.keys(dayData).forEach(name => {
     if(name === person) return;
     if(excludeResidents && residents.has(name)) return;
-    if(codes.includes(dayData[name])) out.push(name);
+    if(codes.includes(baseDutyCode(dayData[name]))) out.push(name);
   });
   return out;
 }
@@ -360,40 +377,46 @@ function buildEvents(person, residentsList){
   const dates = Object.keys(allData).sort();
   dates.forEach(dateStr => {
     const dayData = allData[dateStr];
-    const myCode = dayData[person];
-    if(SKIP.has(myCode)) return;
+    const rawCode = dayData[person];
+    if(SKIP.has(rawCode)) return;
+    const myCode = baseDutyCode(rawCode);
+    if(!SUPPORTED_SHIFT.has(myCode)){
+      throw new Error(`미지원 근무코드: ${dateStr} / ${String(rawCode)} — 일정 누락 방지를 위해 변환을 중단합니다.`);
+    }
+    const icuCombined = isICUDuty(rawCode);
 
     const prevData = allData[addDays(dateStr,-1)];
     const nextData = allData[addDays(dateStr, 1)];
     let summary = null, lines = [], cls = '';
 
     if(myCode === 'D'){
-      summary = 'D'; cls='dD';
+      summary = icuCombined ? rawCode.trim() : 'D'; cls='dD';
       lines.push(['전일 N', prevData ? fmtList(namesWithCode(prevData, person, ['N','HEMS/N'], true, residents)) : '자료없음(전월)']);
       lines.push(['D', fmtList(namesWithCode(dayData, person, ['D'], false, residents))]);
       lines.push(['E', fmtList(namesWithCode(dayData, person, ['E'], true, residents))]);
       lines.push(['MD', fmtList(namesWithCode(dayData, person, ['MD'], true, residents))]);
       lines.push(['N', fmtList(namesWithCode(dayData, person, ['N','HEMS/N'], true, residents))]);
     } else if(myCode === 'E'){
-      summary = 'E'; cls='dE';
+      summary = icuCombined ? rawCode.trim() : 'E'; cls='dE';
       lines.push(['D', fmtList(namesWithCode(dayData, person, ['D'], true, residents))]);
       lines.push(['MD', fmtList(namesWithCode(dayData, person, ['MD'], true, residents))]);
       lines.push(['N', fmtList(namesWithCode(dayData, person, ['N','HEMS/N'], true, residents))]);
     } else if(myCode === 'N' || myCode === 'HEMS/N'){
-      summary = DUTY_LABEL[myCode]; cls = myCode==='N' ? 'dN' : 'dHeliN';
+      summary = icuCombined ? rawCode.trim() : DUTY_LABEL[myCode]; cls = myCode==='N' ? 'dN' : 'dHeliN';
       lines.push(['D', fmtList(namesWithCode(dayData, person, ['D'], true, residents))]);
       lines.push(['E', fmtList(namesWithCode(dayData, person, ['E'], true, residents))]);
       lines.push(['N(함께)', fmtList(namesWithCode(dayData, person, ['N','HEMS/N'], false, residents))]);
       lines.push(['익일 D', nextData ? fmtList(namesWithCode(nextData, person, ['D'], true, residents)) : '자료없음(익월)']);
     } else if(myCode === 'HEMS'){
-      summary = 'Heli'; cls='dHeli';
+      summary = icuCombined ? rawCode.trim() : 'Heli'; cls='dHeli';
       lines.push(['D', fmtList(namesWithCode(dayData, person, ['D'], true, residents))]);
       lines.push(['E', fmtList(namesWithCode(dayData, person, ['E'], true, residents))]);
       lines.push(['MD', fmtList(namesWithCode(dayData, person, ['MD'], true, residents))]);
     } else {
       return;
     }
-    events.push({dateStr, summary, lines, cls});
+    if(icuCombined) lines.push(['ICU', '겸무']);
+    events.push({dateStr, summary, lines, cls, rawCode, person});
   });
 
   months = [...new Set(events.map(e => e.dateStr.slice(0,7)))].sort();
@@ -403,11 +426,12 @@ function buildEvents(person, residentsList){
 function renderStats(){
   const counts = {D:0,E:0,N:0,Heli:0,'Heli+N':0};
   events.forEach(e => {
-    if(e.summary === 'D') counts.D++;
-    else if(e.summary === 'E') counts.E++;
-    else if(e.summary === 'N') counts.N++;
-    else if(e.summary === 'Heli') counts.Heli++;
-    else counts['Heli+N']++;
+    const code = baseDutyCode(e.rawCode);
+    if(code === 'D') counts.D++;
+    else if(code === 'E') counts.E++;
+    else if(code === 'N') counts.N++;
+    else if(code === 'HEMS') counts.Heli++;
+    else if(code === 'HEMS/N') counts['Heli+N']++;
   });
   const total = events.length;
   const statsEl = document.getElementById('stats');
@@ -421,11 +445,12 @@ function renderStats(){
     events.forEach(e => {
       const m = e.dateStr.slice(0,7);
       perMonth[m].total++;
-      if(e.summary==='D') perMonth[m].D++;
-      else if(e.summary==='E') perMonth[m].E++;
-      else if(e.summary==='N') perMonth[m].N++;
-      else if(e.summary==='Heli') perMonth[m].Heli++;
-      else perMonth[m]['Heli+N']++;
+      const code = baseDutyCode(e.rawCode);
+      if(code==='D') perMonth[m].D++;
+      else if(code==='E') perMonth[m].E++;
+      else if(code==='N') perMonth[m].N++;
+      else if(code==='HEMS') perMonth[m].Heli++;
+      else if(code==='HEMS/N') perMonth[m]['Heli+N']++;
     });
     let html = '<tr><th>월</th><th>총 근무일</th><th>D</th><th>E</th><th>N</th><th>Heli</th><th>Heli+N</th></tr>';
     months.forEach(m => {
@@ -516,7 +541,7 @@ function buildIcs(evList){
   evList.forEach(ev => {
     const start = ev.dateStr.replace(/-/g,'');
     const end = addDays(ev.dateStr,1).replace(/-/g,'');
-    const uid = start + '-' + Math.random().toString(16).slice(2,10) + '@aer-dashboard';
+    const uid = 'aer-' + start + '-' + stablePersonHash(ev.person || '') + '@aer-dashboard';
     const desc = ev.lines.map(([l,v]) => icsEscape(`${l} - ${v}`)).join('\\n');
     lines.push('BEGIN:VEVENT', `UID:${uid}`, `DTSTAMP:${dtstamp}`, `DTSTART;VALUE=DATE:${start}`, `DTEND;VALUE=DATE:${end}`, `SUMMARY:${icsEscape(ev.summary)}`, `DESCRIPTION:${desc}`, 'END:VEVENT');
   });
