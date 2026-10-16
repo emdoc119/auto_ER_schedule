@@ -1,7 +1,8 @@
-<!doctype html><html lang="ko"><meta charset="utf-8"><title>AER Calendar dry-run</title>
-<h1>AER Calendar dry-run</h1><p>기존 일정 먼저 조회 · 실제 쓰기 0 · 삭제 없음</p>
+<!doctype html><html lang="ko"><meta charset="utf-8"><meta id="aerCsrf" name="aer-csrf" content="__AER_CSRF__"><title>AER Calendar dry-run</title>
+<h1>AER Calendar dry-run</h1><p>기존 일정 먼저 조회 · 미리보기 후 명시적으로 적용 · 자동 삭제 없음</p>
 <form id="form"><p><label>본인 이름 <input id="person" required maxlength="100"></label></p>
 <p><label>전공의 이름 (쉼표 구분) <input id="residents"></label></p>
 <p><label>Excel <input id="excel" type="file" accept=".xlsx" required></label></p>
 <button id="submit">기존 Calendar 조회 후 비교</button></form>
+<button id="apply" disabled hidden>검증된 계획을 Calendar에 적용</button>
 <p id="status" role="status"></p><pre id="result"></pre><script src="/preview.js"></script></html>

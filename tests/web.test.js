@@ -12,7 +12,7 @@ test('dashboard inline script parses and workbook replacement is not rejected by
 });
 test('File handoff accepts only official Pages opener, exposes no URL/localStorage payload',()=>{
   const handlers={},elements={};
-  for(const id of ['form','excel','person','residents','status'])elements[id]={addEventListener:(event,fn)=>{handlers[id+event]=fn;}};
+  for(const id of ['form','excel','person','residents','status','apply'])elements[id]={addEventListener:(event,fn)=>{handlers[id+event]=fn;}};
   const opener={postMessage:(data,origin)=>{assert.equal(data.type,'aer-ready');assert.equal(origin,'https://emdoc119.github.io');}};
   class File{constructor(){this.size=1;}}
   class DataTransfer{constructor(){this.files=[];this.items={add:f=>this.files.push(f)};}}

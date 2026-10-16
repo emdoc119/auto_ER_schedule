@@ -1,8 +1,11 @@
 # Current objective
 
-Issue #3: Excel → AER duty dry-run을 독립 브랜치에서 검토 가능하게 구현한다.
+읽기 전용 Calendar audit 준비와 PR #4 공개 Pages 영향 검증 후 별도 병합 승인 요청.
 
-- Scope: shared browser/Node parser, synthetic XLSX tests, readonly local OAuth/backend, conservative reconciliation, Pages-to-loopback File handoff, installation guide, PR.
-- Constraints: no live Calendar writes, no production install/restart, no private roster/credentials in repository; Old Jarvis/Gemini Spark/schedulers/finance unchanged.
-- Done: synthetic checks and CI pass, PR opened, Mac mini setup and workflow documented.
-- Next gate: reviewed real-file dry-run and explicit authorization before designing/applying live synchronization.
+- Scope: audit-only calendar.events.owned.readonly + PKCE/state, actual grant validation, explicit raw ID/private/ETag projection, private report; Pages local SheetJS asset and compatibility verification.
+- Constraints: no Calendar writes, Hermes config changes, gateway restart or main merge. Never reuse Old Jarvis clients/tokens or publish private audit artifacts.
+- Local private inputs prepared outside repo, directory700/file600; no client JSON/token yet. Cloud UI reports new-project trial quota reached; no existing project/client changes.
+- Actual adopt/noop split remains unconfirmed until direct readonly OAuth succeeds. Prior visible content match22 and conditional adoption22 are not a confirmed raw audit.
+- PR #4 new candidate ce2e5ea2a7b4320b11878c0fb56c88a8d22aa922: SheetJS CDN403 removed with pinned local asset; tests30 passed. Main-root Pages deployment means merge changes public site; approval not granted.
+- Docs: READONLY_AUDIT_SETUP.md, PAGES_PR4_IMPACT.md, PRE_DEPLOY_REVIEW.md.
+- Next: dedicated audit Desktop JSON/project choice and user Google consent; final CI; request approval for exact PR4 SHA only. Keep PR5 stacked.

@@ -1,11 +1,9 @@
-# Issue #3 continuation
+# Read-only audit preparation
 
-Base: main c0998958b0e62c4f20903a1c677e8b0bcedf46db. Branch: codex/aer-calendar-dry-run.
+Current branch codex/aer-approved-sync-telegram extends #5 6f9039fa756ab33ceed252afbbcc422867f58666. User authorizes audit preparation, but prohibits Calendar writes, Hermes changes, gateway restart and main merge. Latest generic "proceed" is continuation, not the still-unasked exact PR4 merge approval.
 
-Implemented shared parser, private local read-only Calendar preview, conservative legacy matching, File transfer from official Pages origin, synthetic tests and CI. Read-only connector query confirmed 22 existing Nov–Dec 2026 events; no private snapshot committed. No Calendar write adapter or apply route exists. Mac mini deployment and Telegram receiver remain uninstalled/unconnected.
+Added audit-only owned.readonly OAuth command (PKCE/state, strict actual scope), raw Calendar ID/private/ETag projection and validation, optional exclusive private report. Prepared user-private audit.env outside repo; no credentials/token present. Cloud UI is logged in, but dedicated AER project search empty and new-project trial quota reached. No existing project/OAuth client edited. Google consent remains pending.
 
-Start with README.md and docs/MAC_MINI.md; pipeline is backend/pipeline.js, rules are lib/aer-parser.js, matching is lib/reconcile.js. Real-file comparison and live write semantics need later user approval. Missing/changed legacy events produce review; no deletion. Repeated upload is tested against synthetic existing events, not a live write.
+Pages verified via GitHub API main / root and latest main build c0998958; live root/dashboard HTTP200 and exact main bytes. New external SheetJS script probe returned403; PR4 candidate now vendors identical pinned0.20.3 with license/hash and browser-distribution regression, tests30. New PR4 HEAD ce2e5ea2a7b4320b11878c0fb56c88a8d22aa922 must be reviewed/approved for public deployment. Keep PR5 stacked and incorporate prerequisite through ordinary branch merge, no force/rebase.
 
-Pre-merge review: accept known ancillary coworker codes ICU/EICU/외래/E1 without counting them as D/N; personal assignments with these remain unsupported. This compatibility fix is required before deploying PR #4 against the actual workbook format. No Calendar write paths added.
-
-Pages pre-merge inspection found the new external script CDN unavailable (HTTP403 in direct probe). The identical pinned SheetJS 0.20.3 browser distribution is now a versioned local static asset with license/hash and a VM browser-bundle XLSX regression test. PR #4 suite30 passes; main merge remains approval-only.
+Current content comparison22 is not raw identity audit. Actual create/update/adopt/noop/review remains unconfirmed until dedicated OAuth/raw GET succeeds. Use docs/READONLY_AUDIT_SETUP.md and docs/PAGES_PR4_IMPACT.md, then request exact PR4-only merge approval; no implied #5 or operational approval.

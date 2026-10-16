@@ -109,7 +109,6 @@ test('empty personal roster produces no creates and flags existing duties',async
   const plan=await previewExcel(bytes(wb),{person:'Me',calendarId:'synthetic',readEvents:async()=>[desiredEvent(eventsFor(sample())[0])]});
   assert.equal(plan.counts.create,0);assert.equal(plan.counts.review,1);assert.equal(plan.blocked,true);
 });
-
 test('known ancillary coworker codes are readable but never added to D/N handoff groups',()=>{
   for(const code of ['ICU','EICU','외래/E1']){
     const wb=workbook([['11월1일','D(I)',code,'N(I)'],['11월2일','N(I)','D(I)',code]]);
