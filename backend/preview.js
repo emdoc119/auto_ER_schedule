@@ -16,7 +16,7 @@ document.getElementById('form').addEventListener('submit',async e=>{
     if(!file || !file.name.toLowerCase().endsWith('.xlsx') || file.size>8*1024*1024)throw Error('8 MiB 이하 .xlsx 파일을 선택하세요.');
     const bytes=new Uint8Array(await file.arrayBuffer());let binary='';
     for(let i=0;i<bytes.length;i+=8192)binary+=String.fromCharCode(...bytes.subarray(i,i+8192));
-    const response=await fetch('/api/preview',{method:'POST',headers:{'Content-Type':'application/json','X-AER-Preview':'1'},body:JSON.stringify({xlsx:btoa(binary),person,residents})});
+    const response=await fetch('/api/preview',{method:'POST',headers:{'Content-Type':'application/json','X-AER-Preview':'1','X-AER-CSRF':document.getElementById('aerCsrf')?.content||''},body:JSON.stringify({xlsx:btoa(binary),person,residents})});
     if(!response.ok)throw Error(await response.text());
     const plan=await response.json();
     if(requestVersion!==revision){status.textContent='입력이 변경되었습니다. 다시 비교하세요.';return;}
@@ -47,7 +47,7 @@ if(applyButton)applyButton.addEventListener('click',async()=>{
   const planId=currentPlan.planId;
   invalidate();
   try{
-    const response=await fetch('/api/apply',{method:'POST',headers:{'Content-Type':'application/json','X-AER-Preview':'1'},body:JSON.stringify({planId})});
+    const response=await fetch('/api/apply',{method:'POST',headers:{'Content-Type':'application/json','X-AER-Preview':'1','X-AER-CSRF':document.getElementById('aerCsrf')?.content||''},body:JSON.stringify({planId})});
     if(!response.ok)throw Error(await response.text());
     const result=await response.json();
     document.getElementById('status').textContent=`검증 완료 · 생성 ${result.created} · 변경 ${result.updated} · 식별자 연결 ${result.adopted} · 동일 ${result.unchanged}`;

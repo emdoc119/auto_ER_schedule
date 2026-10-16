@@ -110,3 +110,21 @@ test('private credential files enforce ownership, permissions, regular file and 
   const link=path.join(s.directory,'linked.json');fs.linkSync(file,link);assert.throws(()=>readPrivateJSON(file));fs.unlinkSync(link);
   fs.symlinkSync(file,link);assert.throws(()=>readPrivateJSON(link));
 });
+test('22 unmanaged legacy candidates are adoption only and preserve every remote event ID',()=>{
+  const events=Array.from({length:22},(_,i)=>({dateStr:`2026-11-${String(i+1).padStart(2,'0')}`,summary:i%2?'N':'D',person:'SyntheticMe',lines:[]}));
+  const existing=events.map((event,i)=>({...desiredEvent(event),id:'legacy'+i,etag:'v1',extendedProperties:undefined}));
+  const {planFor}=require('../backend/sync-service');
+  const plan=planFor(events,existing,'SyntheticMe');
+  assert.deepEqual(plan.counts,{create:0,update:0,noop:0,review:0,adopt:22});
+  assert.equal(plan.blocked,false);
+  assert.deepEqual(plan.actions.map(action=>action.eventId),existing.map(event=>event.id));
+  assert.ok(plan.actions.every(action=>action.action==='adopt'&&action.eventId!==action.desired.id));
+});
+test('read-only audit reports counts and remote ID/ETag readiness without leaking roster or event IDs',async()=>{
+  const bytes=fixture(),existing=expected(bytes).map((event,i)=>({...event,id:'private-legacy-id'+i,extendedProperties:undefined}));
+  const {auditExcel}=require('../backend/audit');
+  const result=await auditExcel(bytes,{person:'Me',residents:[],calendarId:'synthetic',read:async()=>existing});
+  assert.deepEqual(result.counts,{create:0,update:0,noop:0,review:0,adopt:2});
+  assert.equal(result.mappedIdsPreserved,2);assert.equal(result.etagsReady,true);assert.equal(result.writes,0);
+  assert.doesNotMatch(JSON.stringify(result),/private-legacy-id|SyntheticA|2026-11/);
+});

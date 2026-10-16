@@ -1,10 +1,10 @@
 # Current objective
 
-Issue #3 후속: 검증된 미리보기의 Calendar 적용과 독립 Telegram Excel 수신.
+PR #5 독립 검증 후속: 웹 승인 세션 격리, 기존 Hermes 단일 수신기 설계, 22건 이관 재검증, PR #4 → #5 병합 준비.
 
-- Scope: 채널에 묶인 계획, 기본 쓰기 비활성, 별도 쓰기 OAuth, 재조회/ETag/고정 ID/잠금/적용 후 검증, Telegram 개인 chat+sender allowlist와 명시적 적용.
-- Files: backend/sync-service.js, calendar-writer.js, state.js, runtime.js, server.js, telegram*.js, tests/*, docs/MAC_MINI.md, docs/SYNC_TELEGRAM.md.
-- Constraints: Old Jarvis/Gemini Spark/기존 스케줄러/금융 불변; 개인 원본과 인증정보 공개 금지; 기존 Hermes polling과 경쟁 금지; 자동 삭제/자동 webhook 해제 없음.
-- Done criteria: 합성 검증과 CI 통과, 후속 PR, 설치/복구 안내. 실제 파일/쓰기 인증/기존 봇 소유권이 확인되면 현장 E2E 수행.
-- Actual-file validation: 사용자 제공 원본 22건과 Calendar 22건의 날짜/제목/의료진 설명이 모두 일치. 신규/내용 변경 0건, 실제 쓰기 없음. 기존 웹의 전공의 설정 사용.
-- Pending: 독립 운영 OAuth/봇 설정과 수신 소유권 확인 및 자동화 런타임 현장 E2E.
+- Scope: per-browser sessions and restart/cross-session tests, readonly audit CLI, standalone polling CLI disable, Hermes entrypoint/adapter approval design, dependent PR validation.
+- Constraints: main merge, Calendar writes/enable, new polling, service restart are forbidden without additional user approval. Hermes runtime/config/source unchanged. Preserve private data and user files.
+- Evidence: actual workbook and fresh Calendar 22 events match visible fields, no duplicated dates; conditional unmanaged plan create0/update0/adopt22/noop0/review0 preserves existing IDs. Raw private properties/ETags unavailable through connector; adoption split unconfirmed until direct readonly OAuth audit.
+- PR #4: minimal ancillary-code fix; 29/29 tests and actual-file extraction22. No main merge.
+- Docs: docs/PRE_DEPLOY_REVIEW.md, docs/HERMES_INGRESS_DESIGN.md.
+- Next approval gates: PR #4 merge, direct OAuth setup, exact Hermes plugin/guard/runtime integration diff, then separately first Calendar writes.

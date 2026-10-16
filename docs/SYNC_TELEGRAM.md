@@ -18,30 +18,13 @@ await handler(authenticatedTelegramUpdate);
 
 이 예제의 식별자/토큰은 비공개 설정이며 브라우저 또는 공개 저장소에 넣지 않는다. 원본 update를 임의 HTTP endpoint로 받는 구성은 제공하지 않는다. 기존 gateway에 연결하는 어댑터 작업은 실제 gateway 진입점과 소유권을 확인한 뒤 수행해야 한다.
 
-## 독립 실행 설정
+## 운영 수신기는 Hermes 하나만 유지
 
-[Mac mini 설치](MAC_MINI.md)의 OAuth·Calendar·AER_STATE_DIR 설정을 공유한다. 아래는 **기존 리스너가 없거나 소유권 이전을 확인한 설치자만** 설정한다.
+별도 `npm run telegram` 실행 항목은 제거했다. `node backend/telegram-runner.js`도 네트워크 호출·설정 로드 전에 오류로 종료한다. 내부 polling 함수는 합성 회귀 검증용으로 보존하지만 이 테스트봇의 운영 진입점으로 사용하지 않는다.
 
-```sh
-export AER_TELEGRAM_EXCLUSIVE_POLLING=1
-export AER_TELEGRAM_EXPECTED_BOT_USERNAME='YOUR_APPROVED_TEST_BOT'
-export AER_TELEGRAM_ALLOWED_CHAT_ID='APPROVED_PRIVATE_CHAT_ID'
-export AER_TELEGRAM_ALLOWED_USER_ID='APPROVED_SENDER_ID'
-export AER_TELEGRAM_STATE_DIR="$HOME/.config/aer-calendar/telegram"
-export AER_TELEGRAM_BOT_TOKEN_FILE="$HOME/.config/aer-calendar/telegram-token.json"
-export AER_PERSON='YOUR_ROSTER_NAME'
-export AER_RESIDENTS='["SYNTHETIC_EXAMPLE_REPLACE_WITH_PRIVATE_CONFIG"]'
-mkdir -p "$AER_TELEGRAM_STATE_DIR"
-chmod 700 "$AER_TELEGRAM_STATE_DIR"
-chmod 600 "$AER_TELEGRAM_BOT_TOKEN_FILE"
-npm run telegram
-```
+기존 Hermes의 실제 진입점과 필요한 수정·승인 범위는 [수신 어댑터 설계](HERMES_INGRESS_DESIGN.md)에 기록한다. 이 PR에서는 Hermes 소스·설정·서비스를 수정하거나 재시작하지 않는다. 기존 webhook을 지우거나 pending updates를 확인 처리하지 않는다.
 
-토큰 파일은 `{ "token": "PRIVATE_BOT_TOKEN" }` 형식으로 저장소 밖에 만든다. 코드/Issue/PR/로그에 실토큰이나 의료진 명단을 붙이지 않는다. 환경변수 토큰도 지원하지만 둘을 동시에 지정하면 거부한다. 현재 승인된 테스트봇과 사용자 채팅만 사용하고 Old Jarvis 토큰을 재사용하지 않는다.
-
-읽기 모드(`AER_ENABLE_WRITES=0`/미설정)에서도 수신·미리보기가 가능하다. 실제 적용은 별도 쓰기 토큰과 `AER_ENABLE_WRITES=1`이 필요하다. expected username의 `getMe` 확인과 빈 webhook 확인 후 시작한다. webhook을 지우거나 pending updates를 버리는 코드는 없다. 409 충돌은 즉시 중단한다. 배포 전 운영자는 다른 polling 프로세스가 없는지도 확인해야 한다. API만으로 polling 소유권을 완전히 증명할 수는 없다.
-
-상시 운영은 독립 launchd 항목으로 등록한다. 웹과 수신기는 같은 `AER_STATE_DIR`를 사용해야 하나의 Calendar 쓰기 잠금을 공유한다. polling 전용 상태는 별도 `AER_TELEGRAM_STATE_DIR`를 사용한다.
+승인 후 연결할 때는 본인 이름·전공의 목록·Calendar ID·허용 chat/sender 및 OAuth 경로를 비공개 설정에서 공급한다. 원본 Update의 chat/sender/document/file_id/update_id를 손실 없이 전달하고 기존 Hermes가 인증한 뒤에 AER가 독립적으로 재검증한다. 쓰기 활성화는 여전히 별도 승인과 OAuth가 필요하며 현재는 꺼 둔다.
 
 ## 사용자 흐름
 

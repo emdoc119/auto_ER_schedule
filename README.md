@@ -6,7 +6,7 @@
 - `backend/pipeline.js`: 입력 수단에 독립적인 Excel 정규화와 미리보기.
 - `lib/reconcile.js`: 종일 일정과 보수적인 기존 이벤트 대조. 설명에는 의료진만, 식별자는 private properties에 보관한다.
 - `backend/sync-service.js`: 채널에 묶인 만료 계획, 재조회, ETag, 프로세스 간 잠금, 적용 후 검증. 삭제는 지원하지 않는다.
-- `backend/telegram.js`: 허용된 개인 채팅의 Excel → 미리보기 → 명시적 적용 수신 어댑터. 독립 polling 실행은 기존 Hermes 리스너 소유권을 확인한 경우에만 활성화한다.
+- `backend/telegram.js`: 허용된 개인 채팅의 Excel → 미리보기 → 명시적 적용 수신 어댑터. 운영 수신기는 기존 Hermes만 유지한다. 별도 polling CLI는 비활성화했으며 실제 수신 진입점의 최소 어댑터 설계는 docs/HERMES_INGRESS_DESIGN.md에서 확인한다.
 
 [설치·웹 사용](docs/MAC_MINI.md) · [Telegram 및 복구](docs/SYNC_TELEGRAM.md)
 

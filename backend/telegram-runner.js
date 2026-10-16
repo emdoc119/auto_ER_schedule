@@ -181,13 +181,8 @@ async function runTelegramReceiver({env = process.env, api, createRuntime, signa
 }
 
 if (require.main === module) {
-  const controller = new AbortController();
-  process.once('SIGINT', () => controller.abort());
-  process.once('SIGTERM', () => controller.abort());
-  runTelegramReceiver({signal: controller.signal}).catch(() => {
-    console.error('Telegram receiver stopped. Check private configuration and polling ownership.');
-    process.exitCode = 1;
-  });
+  console.error('Standalone AER polling is disabled. Keep the existing Hermes receiver and use an approved ingress adapter.');
+  process.exitCode = 1;
 }
 
 module.exports = {RunnerError, readConfig, openPollingState, checkPollingOwnership, pollUpdates, runTelegramReceiver};

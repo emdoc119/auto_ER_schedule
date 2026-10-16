@@ -451,3 +451,9 @@ test('runner loads writer lazily after ownership checks, releases lock, and inte
     createRuntime: async () => { throw Error('must not start'); }}), error => error.code === 'BOT_MISMATCH');
   assert.equal(fs.existsSync(path.join(root, 'polling.lock')), false);
 });
+test('standalone polling CLI is disabled before loading credentials or starting network',()=>{
+  const {spawnSync}=require('node:child_process');
+  const child=spawnSync(process.execPath,[path.resolve(__dirname,'../backend/telegram-runner.js')],{encoding:'utf8',env:{}});
+  assert.equal(child.status,1);assert.match(child.stderr,/Standalone AER polling is disabled/);
+  assert.equal(JSON.parse(fs.readFileSync(path.resolve(__dirname,'../package.json'),'utf8')).scripts.telegram,undefined);
+});

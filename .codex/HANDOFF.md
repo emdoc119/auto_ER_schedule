@@ -1,9 +1,13 @@
-# Issue #3 continuation
+# PR #5 independent verification follow-up
 
-Follow-up branch codex/aer-approved-sync-telegram starts at 9745d493343ddbbfdb4510365ca30007e1467a41 (open dry-run PR #4; main not merged).
+Baseline #5 a6ab0d4c19341c138c6e15cbf0ebf865405ca207; branch codex/aer-approved-sync-telegram. User forbids main merge, Calendar write enable, standalone polling and service restart without further approval.
 
-Adds opt-in Calendar writing, private expiring channel-bound plans, legacy identity adoption, preflight snapshot/ETag checks, deterministic create recovery, process-shared lock, post-write verification and partial-failure fresh-preview recovery. Telegram adapter shares the service; dedicated polling runner requires explicit ownership acknowledgment and does not modify existing webhook or gateway.
+Fixed per-browser sessions with separate cookie/CSRF/channel, memory-only server epoch and expiry. Tests cover foreign PLAN IDs with valid attacker session, token/cookie mixing, persistent plan across server restart and expiry/fixation. Standalone polling CLI is disabled; Hermes receiver is kept.
 
-No actual Calendar writes or service installs were made. User-provided actual workbook was parsed and 22 events match the 22 live Calendar events by date/title/description content (whitespace-normalized); zero creates/content changes, so no rewrite. Existing dashboard resident defaults used. Independent OAuth files and current test-bot receiver ownership are unverified. Do not start competing polling or infer operational readiness from source tests. Old Jarvis/Gemini Spark/schedulers/finance untouched.
+Read-only ingress investigation pinned actual installed Hermes native Telegram plugin (source 73b9f2af). Proposed native handler + Python/Node RPC, durable claim and required-handler guard; no upstream/runtime edits. See docs/HERMES_INGRESS_DESIGN.md for exact entrypoints and approval scope.
 
-Start with tasks/CURRENT.md, docs/MAC_MINI.md and docs/SYNC_TELEGRAM.md. Code entry points: backend/runtime.js, sync-service.js, telegram-runner.js. Real-file verified plan plus runtime credentials/ownership are required for live E2E. Main merge still requires user authorization. Private plan store must be outside checkout, mode700 with files600.
+Actual workbook22 and fresh Calendar22 match visible date/title/description content, no duplicate dates. Expected unmanaged adoption22 preserves old IDs, but connector omits private properties/ETags so actual adopt/noop split is not confirmed. backend/audit.js provides read-only raw API aggregate verification once OAuth exists. Never treat omitted metadata as absent.
+
+PR #4 compatibility fix 45475dc: accept known ancillary coworker codes; tests29 and actual extraction22 pass. Keep PR #5 stacked until user-approved #4 merge, then fetch exact main SHA, retarget #5 and rerun full CI. Current main ancestry checks are preparation only.
+
+Start with tasks/CURRENT.md and docs/PRE_DEPLOY_REVIEW.md. No live Calendar writes, polling, config/runtime edits or restarts were performed.
