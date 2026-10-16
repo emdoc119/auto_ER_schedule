@@ -12,7 +12,7 @@ const core = inline.slice(0, inline.indexOf('// ---------- Rendering ----------'
 const ics = inline.slice(inline.indexOf('function icsEscape'), inline.indexOf('function downloadIcs'));
 
 function evaluate(checks) {
-  return vm.runInNewContext(core + '\n' + ics + '\n' + checks, {}, {timeout: 2000});
+  return vm.runInNewContext('(function(){'+ core + '\n' + ics + '\n' + checks+'})()', {AER:require('../lib/aer-parser')}, {timeout: 2000});
 }
 
 test('ICU codes preserve title and normalize colleague / handoff groups', () => {

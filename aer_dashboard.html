@@ -6,7 +6,7 @@
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
 <link href="https://fonts.googleapis.com/css2?family=IBM+Plex+Mono:wght@500;600&family=Inter:wght@400;500;600&display=swap" rel="stylesheet">
-<script src="https://cdnjs.cloudflare.com/ajax/libs/xlsx/0.18.5/xlsx.full.min.js"></script>
+<script src="vendor/xlsx-0.20.3.full.min.js"></script>
 <style>
   :root{
     --bg:#F5F6F3; --surface:#FFFFFF; --border:#E1E3DD; --border-strong:#C9CCC3;
@@ -174,77 +174,24 @@
         <button class="btn" id="dlAll">전체 기간 ICS 다운로드</button>
         <button class="btn" id="toggleGcal">구글 캘린더 빠른등록 링크 보기</button>
       </div>
-      <div class="note">근무 코드는 기존처럼 종일 일정으로 표시합니다. (I)는 ICU 겸무이며 일반 근무와 같은 그룹으로 동료·인계를 확인합니다. ICS UID는 재생성 시 동일하게 유지되지만 Google Calendar의 재가져오기 중복 제거는 보장되지 않으므로 기존 일정과 비교하세요. ICS 가져오기가 전체 일정을 한 번에 등록하는 가장 확실한 방법입니다. 구글 캘린더 링크는 근무일 하나씩 새 창에서 열려 내용이 채워진 채로 뜨고, "저장"만 누르면 등록돼요 — 브라우저에서 완전 자동 일괄 등록은 구글 계정 인증 앱 등록이 필요해 이 화면에서는 지원되지 않습니다.</div>
+      <div class="note">모든 근무는 종일 일정입니다. (I)는 제목에 보존되며 동료·인계는 기본 그룹을 사용합니다. ICS/빠른등록은 수동 입력이므로 중복 방지를 보장하지 않습니다. Calendar dry-run으로 기존 일정을 먼저 비교하세요.</div>
       <div class="gcal-list hidden" id="gcalList"></div>
+      <div class="actions"><button class="btn" id="calendarPreview">Calendar dry-run 열기</button></div>
+      <p class="note">Mac mini의 독립 백엔드를 SSH로 연결한 뒤 선택한 Excel을 전용 dry-run 화면으로 전달합니다. 전달된 이름·파일을 확인한 뒤 비교하세요. 마지막으로 선택한 Excel 한 파일만 전달됩니다. 실제 Calendar 쓰기는 비활성화되어 있습니다.</p>
     </div>
   </div>
 </div>
 
+<script src="lib/aer-parser.js"></script>
 <script>
-const DUTY_LABEL = {D:'D', E:'E', N:'N', HEMS:'Heli', 'HEMS/N':'Heli+N 24시간'};
-const SKIP = new Set(['O','휴가', undefined, null, '']);
-// ICU (I) 겸무 표시 보존 / 기본 근무 그룹 판정 분리.
-const SUPPORTED_SHIFT = new Set(['D','E','N','HEMS','HEMS/N']);
-function baseDutyCode(raw){
-  if(raw == null || SKIP.has(raw)) return null;
-  if(typeof raw !== 'string') return null;
-  const code = raw.trim();
-  const m = code.match(/^(D|E|N|HEMS|HEMS\/N)\(I\)$/);
-  return m ? m[1] : code;
-}
-function isICUDuty(raw){
-  return typeof raw === 'string' && /^(D|E|N|HEMS|HEMS\/N)\(I\)$/.test(raw.trim());
-}
-function stablePersonHash(person){
-  let h = 2166136261;
-  for(let i=0; i<person.length; i++){ h ^= person.charCodeAt(i); h = Math.imul(h, 16777619); }
-  return (h >>> 0).toString(36);
-}
-
+const {dstr,baseDutyCode,isICUDuty,stablePersonHash,addDays} = AER;
+let uploadedExcel = null;
 let allData = {};      // 'YYYY-MM-DD' -> {name: code}   (accumulates across uploads)
 let events = [];
 let months = [];
 let currentMonth = null;
 let selectedDate = null;
 let pendingExtract = null; // holds extracted-from-image data awaiting confirmation
-
-function pad(n){ return n < 10 ? '0'+n : ''+n; }
-function dstr(y,m,d){ return y+'-'+pad(m)+'-'+pad(d); }
-function addDays(dateStr, delta){
-  const [y,m,d] = dateStr.split('-').map(Number);
-  const dt = new Date(y, m-1, d);
-  dt.setDate(dt.getDate()+delta);
-  return dstr(dt.getFullYear(), dt.getMonth()+1, dt.getDate());
-}
-
-// ---------- XLSX parsing ----------
-function parseWorkbookIntoAllData(wb, person){
-  wb.SheetNames.forEach(sheetName => {
-    const ws = wb.Sheets[sheetName];
-    const rows = XLSX.utils.sheet_to_json(ws, {header:1, raw:true, defval:null});
-    let headerRowIdx = -1;
-    for(let i=0;i<Math.min(rows.length,30);i++){
-      if(rows[i] && rows[i].some(c => c === person)){ headerRowIdx = i; }
-    }
-    if(headerRowIdx === -1) return;
-    const cols = {};
-    const header = rows[headerRowIdx];
-    for(let c=7;c<header.length;c++){ if(header[c]) cols[c] = header[c]; }
-    const ymMatch = sheetName.match(/(\d{4})년/);
-    const year = ymMatch ? parseInt(ymMatch[1]) : new Date().getFullYear();
-    for(let r=headerRowIdx+1;r<rows.length;r++){
-      const row = rows[r];
-      if(!row || typeof row[0] !== 'string') continue;
-      const m = row[0].match(/^(\d{1,2})월(\d{1,2})일/);
-      if(!m) continue;
-      const month = parseInt(m[1]), day = parseInt(m[2]);
-      const key = dstr(year, month, day);
-      const dayData = {};
-      Object.keys(cols).forEach(c => { dayData[cols[c]] = row[parseInt(c)]; });
-      allData[key] = dayData;
-    }
-  });
-}
 
 // ---------- Image (vision) extraction ----------
 function fileToBase64(file){
@@ -360,67 +307,7 @@ function convertExtractedToAllData(extracted){
 }
 
 // ---------- Notes / events (shared by both input types) ----------
-function namesWithCode(dayData, person, codes, excludeResidents, residents){
-  const out = [];
-  Object.keys(dayData).forEach(name => {
-    if(name === person) return;
-    if(excludeResidents && residents.has(name)) return;
-    if(codes.includes(baseDutyCode(dayData[name]))) out.push(name);
-  });
-  return out;
-}
-function fmtList(arr){ return arr.length ? arr.join(', ') : '없음'; }
-
-function buildEvents(person, residentsList){
-  const residents = new Set(residentsList);
-  events = [];
-  const dates = Object.keys(allData).sort();
-  dates.forEach(dateStr => {
-    const dayData = allData[dateStr];
-    const rawCode = dayData[person];
-    if(SKIP.has(rawCode)) return;
-    const myCode = baseDutyCode(rawCode);
-    if(!SUPPORTED_SHIFT.has(myCode)){
-      throw new Error(`미지원 근무코드: ${dateStr} / ${String(rawCode)} — 일정 누락 방지를 위해 변환을 중단합니다.`);
-    }
-    const icuCombined = isICUDuty(rawCode);
-
-    const prevData = allData[addDays(dateStr,-1)];
-    const nextData = allData[addDays(dateStr, 1)];
-    let summary = null, lines = [], cls = '';
-
-    if(myCode === 'D'){
-      summary = icuCombined ? rawCode.trim() : 'D'; cls='dD';
-      lines.push(['전일 N', prevData ? fmtList(namesWithCode(prevData, person, ['N','HEMS/N'], true, residents)) : '자료없음(전월)']);
-      lines.push(['D', fmtList(namesWithCode(dayData, person, ['D'], false, residents))]);
-      lines.push(['E', fmtList(namesWithCode(dayData, person, ['E'], true, residents))]);
-      lines.push(['MD', fmtList(namesWithCode(dayData, person, ['MD'], true, residents))]);
-      lines.push(['N', fmtList(namesWithCode(dayData, person, ['N','HEMS/N'], true, residents))]);
-    } else if(myCode === 'E'){
-      summary = icuCombined ? rawCode.trim() : 'E'; cls='dE';
-      lines.push(['D', fmtList(namesWithCode(dayData, person, ['D'], true, residents))]);
-      lines.push(['MD', fmtList(namesWithCode(dayData, person, ['MD'], true, residents))]);
-      lines.push(['N', fmtList(namesWithCode(dayData, person, ['N','HEMS/N'], true, residents))]);
-    } else if(myCode === 'N' || myCode === 'HEMS/N'){
-      summary = icuCombined ? rawCode.trim() : DUTY_LABEL[myCode]; cls = myCode==='N' ? 'dN' : 'dHeliN';
-      lines.push(['D', fmtList(namesWithCode(dayData, person, ['D'], true, residents))]);
-      lines.push(['E', fmtList(namesWithCode(dayData, person, ['E'], true, residents))]);
-      lines.push(['N(함께)', fmtList(namesWithCode(dayData, person, ['N','HEMS/N'], false, residents))]);
-      lines.push(['익일 D', nextData ? fmtList(namesWithCode(nextData, person, ['D'], true, residents)) : '자료없음(익월)']);
-    } else if(myCode === 'HEMS'){
-      summary = icuCombined ? rawCode.trim() : 'Heli'; cls='dHeli';
-      lines.push(['D', fmtList(namesWithCode(dayData, person, ['D'], true, residents))]);
-      lines.push(['E', fmtList(namesWithCode(dayData, person, ['E'], true, residents))]);
-      lines.push(['MD', fmtList(namesWithCode(dayData, person, ['MD'], true, residents))]);
-    } else {
-      return;
-    }
-    if(icuCombined) lines.push(['ICU', '겸무']);
-    events.push({dateStr, summary, lines, cls, rawCode, person});
-  });
-
-  months = [...new Set(events.map(e => e.dateStr.slice(0,7)))].sort();
-}
+function buildEvents(person,residents){events=AER.buildEvents(allData,person,residents);months=[...new Set(events.map(e=>e.dateStr.slice(0,7)))].sort();}
 
 // ---------- Rendering ----------
 function renderStats(){
@@ -509,6 +396,7 @@ function renderCalendar(){
   });
 }
 
+function escapeHtml(value){return String(value).replace(/[&<>"']/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));}
 function renderDetail(){
   const el = document.getElementById('detail');
   if(!selectedDate){ el.classList.add('hidden'); return; }
@@ -521,7 +409,7 @@ function renderDetail(){
       <span class="date">${ev.dateStr} · ${ev.summary}</span>
       <a class="btn" href="${gcalUrl}" target="_blank" rel="noopener">구글 캘린더에 추가</a>
     </div>
-    ${ev.lines.map(([label,val]) => `<div class="noteline"><b>${label}</b> — ${val}</div>`).join('')}
+    ${ev.lines.map(([label,val]) => `<div class="noteline"><b>${escapeHtml(label)}</b> — ${escapeHtml(val)}</div>`).join('')}
   `;
 }
 
@@ -604,12 +492,11 @@ function handleXlsxFile(file){
       const data = new Uint8Array(e.target.result);
       const wb = XLSX.read(data, {type:'array'});
       const person = document.getElementById('personName').value.trim();
-      const before = Object.keys(allData).length;
-      parseWorkbookIntoAllData(wb, person);
-      if(Object.keys(allData).length === before){
-        showErr(`시트에서 "${person}" 이름이 포함된 헤더 행을 찾지 못했습니다. 이름 철자를 확인해주세요.`);
-        return;
-      }
+      const added=AER.parseWorkbook(wb,person,XLSX);
+      const candidate={...allData,...added};
+      AER.buildEvents(candidate,person,document.getElementById('residents').value.split(',').map(s=>s.trim()).filter(Boolean));
+      allData=candidate;
+      uploadedExcel=file;
       finalizeAndRender();
     } catch(err){
       showErr('파일을 읽는 중 오류가 발생했습니다: ' + err.message);
@@ -633,6 +520,21 @@ async function handleImageFile(file){
   }
 }
 
+document.getElementById('calendarPreview').addEventListener('click',()=>{
+  if(!uploadedExcel){showErr('Excel을 먼저 업로드하세요.');return;}
+  const popup=window.open('http://127.0.0.1:8787/', '_blank');
+  if(!popup){showErr('팝업을 허용한 뒤 다시 시도하세요.');return;}
+  const file=uploadedExcel;
+  const person=document.getElementById('personName').value.trim();
+  const residents=document.getElementById('residents').value;
+  const ready=e=>{
+    if(e.origin!=='http://127.0.0.1:8787' || e.source!==popup || e.data?.type!=='aer-ready')return;
+    popup.postMessage({type:'aer-excel',file,person,residents},'http://127.0.0.1:8787');
+    window.removeEventListener('message',ready);
+  };
+  window.addEventListener('message',ready);
+  setTimeout(()=>window.removeEventListener('message',ready),60000);
+});
 // ---------- Wiring ----------
 // 로컬 스토리지에서 API 키 불러오기
 const savedApiKey = localStorage.getItem('geminiApiKey');
@@ -665,6 +567,7 @@ document.getElementById('confirmReview').addEventListener('click', () => {
   try{
     const edited = JSON.parse(document.getElementById('reviewJson').value);
     const added = convertExtractedToAllData(edited);
+    uploadedExcel=null;
     Object.assign(allData, added);
     document.getElementById('reviewBox').classList.add('hidden');
     finalizeAndRender();
@@ -693,7 +596,7 @@ document.getElementById('toggleGcal').addEventListener('click', (e) => {
   e.target.textContent = willShow ? '구글 캘린더 빠른등록 링크 숨기기' : '구글 캘린더 빠른등록 링크 보기';
 });
 document.getElementById('resetAll').addEventListener('click', () => {
-  allData = {}; events = []; months = []; currentMonth = null; selectedDate = null;
+  uploadedExcel=null; allData = {}; events = []; months = []; currentMonth = null; selectedDate = null;
   document.getElementById('results').classList.add('hidden');
   document.getElementById('reviewBox').classList.add('hidden');
   clearErr();
